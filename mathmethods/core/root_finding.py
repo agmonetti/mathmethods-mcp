@@ -9,7 +9,7 @@ import numpy as np
 from typing import Dict, List, Tuple, Callable
 import sympy as sp
 import math
-import re
+from .utils import safe_sympify
 
 class RootFindingService:
     
@@ -17,10 +17,9 @@ class RootFindingService:
     def compilar_funcion(texto_funcion: str, variables: str = 'x') -> Callable:
         """Convierte string matemático a función callable con NumPy."""
         try:
-            texto_funcion = re.sub(r'(?<![A-Za-z0-9_])[eE]\^', 'E**', texto_funcion).replace('^', '**')
             x = sp.Symbol(variables.split()[0])
             diccionario_local = {'e': sp.E, 'pi': sp.pi}
-            expr = sp.sympify(texto_funcion, locals=diccionario_local)
+            expr = safe_sympify(texto_funcion, local_dict=diccionario_local, allowed_symbols=variables.split())
             return sp.lambdify(x, expr, 'numpy')
         except Exception as e:
             raise ValueError(f"Error compilando función: {str(e)}")

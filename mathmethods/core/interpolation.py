@@ -5,7 +5,7 @@ import numpy as np
 from typing import Dict, List
 import sympy as sp
 import math
-import re
+from .utils import safe_sympify
 
 class InterpolationService:
     
@@ -13,10 +13,9 @@ class InterpolationService:
     def compilar_funcion(texto_funcion: str):
         """Convierte string a función simbólica."""
         try:
-            texto_funcion = re.sub(r'(?<![A-Za-z0-9_])[eE]\^', 'E**', texto_funcion).replace('^', '**')
             x = sp.Symbol('x')
             diccionario_local = {'e': sp.E, 'pi': sp.pi}
-            expr = sp.sympify(texto_funcion, locals=diccionario_local)
+            expr = safe_sympify(texto_funcion, local_dict=diccionario_local, allowed_symbols=['x'])
             return sp.lambdify(x, expr, 'numpy'), expr
         except Exception as e:
             raise ValueError(f"Error compilando: {str(e)}")

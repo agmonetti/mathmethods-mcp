@@ -9,17 +9,16 @@ import numpy as np
 import sympy as sp
 from typing import Dict, Callable
 import warnings
-import re
+from .utils import safe_sympify
 
 class IntegrationService:
     
     @staticmethod
     def compilar_funcion(texto_funcion: str) -> Callable:
         try:
-            texto_funcion = re.sub(r'(?<![A-Za-z0-9_])[eE]\^', 'E**', texto_funcion).replace('^', '**').replace('sen', 'sin')
             x_sym = sp.Symbol('x')
             diccionario_local = {'e': sp.E, 'pi': sp.pi}
-            expr = sp.sympify(texto_funcion, locals=diccionario_local)
+            expr = safe_sympify(texto_funcion, local_dict=diccionario_local, allowed_symbols=['x'])
             func_base = sp.lambdify(x_sym, expr, 'numpy')
             
             def func_inteligente(x_val):

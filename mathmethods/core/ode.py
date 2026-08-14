@@ -1,7 +1,7 @@
 import numpy as np
 import sympy as sp
 import math
-import re
+from .utils import safe_sympify
 
 class ODEService:
 
@@ -22,8 +22,7 @@ class ODEService:
         y_func = sp.Function('y')(x)
         
         diccionario_local = {'y': y_func, 'e': sp.E, 'pi': sp.pi}
-        texto_dy_dx = re.sub(r'(?<![A-Za-z0-9_])[eE]\^', 'E**', texto_dy_dx).replace('^', '**')
-        f_expr = sp.sympify(texto_dy_dx, locals=diccionario_local)
+        f_expr = safe_sympify(texto_dy_dx, local_dict=diccionario_local, allowed_symbols=['x', 'y'])
         
         edo = sp.Eq(y_func.diff(x), f_expr)
         condiciones_iniciales = {y_func.subs(x, x0_val): y0_val}
@@ -42,8 +41,8 @@ class ODEService:
     def compilar_f(ecuacion_str):
         """Compila f(x,y) a función lambda de NumPy."""
         x_sym, y_sym = sp.symbols('x y')
-        ecuacion_str_limpia = re.sub(r'(?<![A-Za-z0-9_])[eE]\^', 'E**', ecuacion_str).replace('^', '**')
-        return sp.lambdify((x_sym, y_sym), sp.sympify(ecuacion_str_limpia, locals={'e': sp.E, 'pi': sp.pi}), 'numpy')
+        expr = safe_sympify(ecuacion_str, local_dict={'e': sp.E, 'pi': sp.pi}, allowed_symbols=['x', 'y'])
+        return sp.lambdify((x_sym, y_sym), expr, 'numpy')
 
     @staticmethod
     def ejecutar_metodo(metodo, ecuacion_str, x0, y0, xf, h, precision=8, tol=None):
