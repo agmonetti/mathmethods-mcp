@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "modelo-mat-stdio": {
+      "type": "stdio",
+      "command": "/home/agus-hy/Documentos/modelo-mat-mcp/venv/bin/python",
+      "args": ["/home/agus-hy/Documentos/modelo-mat-mcp/server.py"]
+    },
+    "modelo-mat-http": {
+      "type": "http",
+      "url": "http://127.0.0.1:8000/mcp"
+    }
+  }
+}

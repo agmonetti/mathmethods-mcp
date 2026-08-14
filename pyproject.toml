@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mathmethods"
+version = "0.1.0"
+description = "MCP server exposing numerical-methods tools: bisection, Simpson 1/3, Runge-Kutta 4, Lagrange interpolation"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]==1.14.1",
+    "numpy>=1.26.0",
+    "sympy>=1.12.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0"]
+
+[tool.setuptools.packages.find]
+include = ["mathmethods*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
