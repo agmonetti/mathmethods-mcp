@@ -101,28 +101,43 @@ The transport can also be chosen with the `MCP_TRANSPORT` environment variable
 
 ## Connect from a client
 
-### VS Code
+Every client below registers the same server. Replace the placeholders:
+
+- `<UV>` — path to the `uv` binary (or just `uv` if it is on your `PATH`)
+- `<PROJ>` — absolute path to this checkout, e.g. `/home/me/modelo-mat-mcp`
+
+**Local (STDIO)** — the client launches the server for you; only needs `uv`:
+
+```
+<UV> run --frozen --project <PROJ> python <PROJ>/server.py
+```
+
+**Remote (Streamable HTTP)** — start it once in a terminal, then point the
+client at `http://127.0.0.1:8000/mcp`:
+
+```bash
+MCP_TRANSPORT=streamable-http uv run python server.py
+```
+
+<details>
+<summary><b>VS Code</b></summary>
 
 Your `.vscode/mcp.json` is **machine-specific and git-ignored** (it contains
-local paths). Copy the template and adjust the paths to your checkout:
+local paths). Copy the template and adjust the paths:
 
 ```bash
 cp mcp.example.json .vscode/mcp.json
 ```
-
-The STDIO entry launches the server through `uv` (using the project's
-`.venv`/`uv.lock`); if you prefer a classic virtualenv, use `venv/bin/python`
-instead of `uv run`.
 
 ```json
 {
   "servers": {
     "modelo-mat-stdio": {
       "type": "stdio",
-      "command": "/absolute/path/to/uv",
+      "command": "<UV>",
       "args": [
-        "run", "--frozen", "--project", "/absolute/path/to/modelo-mat-mcp",
-        "python", "/absolute/path/to/modelo-mat-mcp/server.py"
+        "run", "--frozen", "--project", "<PROJ>",
+        "python", "<PROJ>/server.py"
       ]
     },
     "modelo-mat-http": {
@@ -133,18 +148,152 @@ instead of `uv run`.
 }
 ```
 
-For the HTTP entry, start the server first in a terminal:
+Open `.vscode/mcp.json` and press **Start** next to the server you want. The
+STDIO entry is started on demand by VS Code; the HTTP entry needs the server
+already running (see above). Reload the window after editing
+(`Developer: Reload Window`) if the servers don't appear.
 
-```bash
-MCP_TRANSPORT=streamable-http uv run python server.py
+</details>
+
+<details>
+<summary><b>Zed</b></summary>
+
+Add the entry under `context_servers` (note: **not** `mcp_servers`) in
+`~/.config/zed/settings.json` or the project-level `.zed/settings.json`:
+
+```json
+{
+  "context_servers": {
+    "modelo-mat": {
+      "command": "<UV>",
+      "args": [
+        "run", "--frozen", "--project", "<PROJ>",
+        "python", "<PROJ>/server.py"
+      ]
+    }
+  }
+}
 ```
 
-With the STDIO entry you only need the server **running** for the HTTP entry;
-STDIO is started by the client on demand.
+You can also manage them via **Settings → AI → MCP Servers**. For the HTTP
+transport Zed connects natively over STDIO, so the local entry above is the
+recommended way.
 
-### Claude Desktop
+</details>
 
-Add a `mcpServers` entry pointing at the same `command`/`args`.
+<details>
+<summary><b>opencode / OpenChamber</b></summary>
+
+Both opencode and the OpenChamber desktop app share the same configuration
+format. Add the entry under `mcp` in `opencode.json` (project root) or in the
+global `~/.config/opencode/opencode.jsonc`:
+
+```json
+{
+  "mcp": {
+    "modelo-mat": {
+      "type": "local",
+      "command": ["<UV>", "run", "--frozen", "--project", "<PROJ>", "python", "<PROJ>/server.py"],
+      "enabled": true
+    }
+  }
+}
+```
+
+Or register it with the CLI (equivalent):
+
+```bash
+opencode mcp add modelo-mat -- <UV> run --frozen --project <PROJ> python <PROJ>/server.py
+```
+
+For a remote server running on `http://127.0.0.1:8000/mcp`:
+
+```json
+{
+  "mcp": {
+    "modelo-mat": {
+      "type": "remote",
+      "url": "http://127.0.0.1:8000/mcp",
+      "enabled": true
+    }
+  }
+}
+```
+
+Verify with `opencode mcp list`.
+
+</details>
+
+<details>
+<summary><b>Antigravity</b></summary>
+
+Add the entry under `mcpServers` in the Antigravity config file, typically
+`~/.gemini/antigravity/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "modelo-mat": {
+      "command": "<UV>",
+      "args": [
+        "run", "--frozen", "--project", "<PROJ>",
+        "python", "<PROJ>/server.py"
+      ]
+    }
+  }
+}
+```
+
+If the file path differs on your install, use the in-IDE **Settings →
+Integrations → MCP Servers** panel instead, which writes the same format.
+
+</details>
+
+<details>
+<summary><b>GitHub Copilot CLI</b></summary>
+
+The GitHub Copilot CLI (`copilot`) lets you add a server interactively:
+
+```bash
+copilot
+```
+
+then inside the session:
+
+```text
+/mcp add
+  Server name:  modelo-mat
+  Server type:  1 (Local/STDIO)
+  Command:      <UV> run --frozen --project <PROJ> python <PROJ>/server.py
+```
+
+Press `Ctrl+S` to save. The settings are stored in
+`~/.copilot/mcp-config.json` (top-level `mcpServers`); check the connection
+with `/mcp show`.
+
+</details>
+
+<details>
+<summary><b>Claude Desktop / Claude Code</b></summary>
+
+Both use the `mcpServers` format. In Claude Desktop, edit
+`claude_desktop_config.json`; in Claude Code use `claude mcp add`:
+
+```json
+{
+  "mcpServers": {
+    "modelo-mat": {
+      "command": "<UV>",
+      "args": [
+        "run", "--frozen", "--project", "<PROJ>",
+        "python", "<PROJ>/server.py"
+      ]
+    }
+  }
+}
+```
+
+</details>
 
 ### Verify with the MCP Inspector
 
