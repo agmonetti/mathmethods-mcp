@@ -34,7 +34,7 @@ modelo-mat-mcp/
 │       ├── ode.py
 │       └── interpolation.py
 ├── tests/test_tools.py
-├── .vscode/mcp.json          # sample server registration
+├── mcp.example.json            # server registration template (copy to .vscode/mcp.json)
 ├── requirements.txt
 └── pyproject.toml
 ```
@@ -74,8 +74,14 @@ The transport can also be chosen with the `MCP_TRANSPORT` environment variable
 
 ### VS Code
 
-Register the server in `.vscode/mcp.json` (adjust the paths to your checkout).
-The STDIO entry below launches the server through `uv` (using the project's
+Your `.vscode/mcp.json` is **machine-specific and git-ignored** (it contains
+local paths). Copy the template and adjust the paths to your checkout:
+
+```bash
+cp mcp.example.json .vscode/mcp.json
+```
+
+The STDIO entry launches the server through `uv` (using the project's
 `.venv`/`uv.lock`); if you prefer a classic virtualenv, use `venv/bin/python`
 instead of `uv run`.
 

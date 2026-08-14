@@ -2,14 +2,14 @@
   "servers": {
     "modelo-mat-stdio": {
       "type": "stdio",
-      "command": "/home/agus-hy/.local/bin/uv",
+      "command": "/absolute/path/to/uv",
       "args": [
         "run",
         "--frozen",
         "--project",
-        "/home/agus-hy/Documentos/modelo-mat-mcp",
+        "/absolute/path/to/modelo-mat-mcp",
         "python",
-        "/home/agus-hy/Documentos/modelo-mat-mcp/server.py"
+        "/absolute/path/to/modelo-mat-mcp/server.py"
       ]
     },
     "modelo-mat-http": {

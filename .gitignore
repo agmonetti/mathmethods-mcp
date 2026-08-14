@@ -34,9 +34,8 @@ Thumbs.db
 *.swp
 .idea/
 
-# VS Code (keep the MCP server registration sample)
-.vscode/*
-!.vscode/mcp.json
+# VS Code (machine-specific config, incl. mcp.json with local paths)
+.vscode/
 
 # Logs
 *.log
