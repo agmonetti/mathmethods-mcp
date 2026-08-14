@@ -15,10 +15,21 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0.0"]
+dev = ["pytest>=8.0.0", "ruff>=0.8.0"]
 
 [tool.setuptools.packages.find]
 include = ["mathmethods*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+# Vendored math core mirrors the upstream backend (Spanish legacy code) — not linted.
+extend-exclude = ["mathmethods/core"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "RUF"]
+# B017: tests deliberately assert blind Exception for invalid inputs.
+# BLE001: validation code intentionally catches broad exceptions.
+ignore = ["B017", "BLE001"]

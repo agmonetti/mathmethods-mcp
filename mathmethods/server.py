@@ -10,7 +10,6 @@ import math
 import os
 
 import numpy as np
-
 from mcp.server.fastmcp import FastMCP
 
 from mathmethods import compiler
@@ -231,7 +230,7 @@ def ode_rk4(
     if tol is not None:
         tol = _clean_float(tol, "tol", positive=True)
 
-    n_steps = int(round((xf - x0) / h))
+    n_steps = round((xf - x0) / h)
     _require(1 <= n_steps <= MAX_ODE_STEPS, "step count must be between 1 and 2000.")
 
     normalized = compiler.validate(ecuacion_str, variables=("x", "y"))

@@ -21,7 +21,7 @@ as any ``.`` or ``__``. Only after that gate is it safe to call ``sympify``.
 from __future__ import annotations
 
 import re
-from typing import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 import sympy as sp
 
@@ -179,7 +179,7 @@ def compile_callable(
     """
     normalized = validate(expr_str, variables)
     symbols = [sp.Symbol(str(name), real=True) for name in variables]
-    local_dict = {str(name): sym for name, sym in zip(variables, symbols)}
+    local_dict = {str(name): sym for name, sym in zip(variables, symbols, strict=True)}
     local_dict.update(_BUILTIN_CONSTANTS)
     expr = sp.sympify(normalized, locals=local_dict)
     return sp.lambdify(symbols, expr, modules=list(modules))
@@ -194,7 +194,7 @@ def sanitize_and_check(
     """
     normalized = validate(expr_str, list(variables))
     symbols = [sp.Symbol(str(name), real=True) for name in variables]
-    local_dict = {str(name): sym for name, sym in zip(variables, symbols)}
+    local_dict = {str(name): sym for name, sym in zip(variables, symbols, strict=True)}
     local_dict.update(_BUILTIN_CONSTANTS)
     expr = sp.sympify(normalized, locals=local_dict)
     return normalized, expr
