@@ -379,6 +379,19 @@ driven by an LLM, so defense in depth is applied:
   correct.
 - The 1D bifurcation table is downsampled to 300 rows for readability.
 
+## Publishing to PyPI
+
+The package is publish-ready (`uv build` succeeds and the wheel exposes all
+tools). To release:
+
+```bash
+uv build
+uv publish          # requires a PyPI token: `uv login` or UV_PUBLISH_TOKEN
+```
+
+Once published, every client config just works with `uvx mathmethods` (no
+paths, no venv). Bump `version` in `pyproject.toml` before each release.
+
 ## Keeping the vendored core in sync
 
 The math lives in `modeladoYsimulacion-web/backend/app/methods/`. When the

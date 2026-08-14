@@ -174,7 +174,7 @@ class Dynamic2DNonHomogeneousService:
         }
 
         automatic_trajectories = []
-        n_side = int(math.sqrt(cantidad_trayectorias))
+        n_side = int(math.ceil(math.sqrt(cantidad_trayectorias)))
         if n_side > 1:
             x0_auto = np.linspace(x_min, x_max, n_side)
             y0_auto = np.linspace(y_min, y_max, n_side)
