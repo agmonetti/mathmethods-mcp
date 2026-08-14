@@ -316,7 +316,7 @@ class Dynamic2DNonHomogeneousService:
                     if used_evects[j]:
                         continue
                     try:
-                        if abs(float(ev[0]) - float(av)) < 1e-6:
+                        if abs(float(np.real(ev[0])) - float(np.real(av))) < 1e-6:
                             eigen_syms_ordered.append(ev[0])
                             used_evects[j] = True
                             matched = True

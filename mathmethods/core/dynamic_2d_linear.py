@@ -122,8 +122,8 @@ class Dynamic2DLinearService:
         list_autovectores = []
         for i in range(len(autovalores)):
             list_autovectores.append({
-                "vx": float(autovectores[0, i]),
-                "vy": float(autovectores[1, i])
+                "vx": float(np.real(autovectores[0, i])),
+                "vy": float(np.real(autovectores[1, i]))
             })
 
         X0 = np.array([x0, y0], dtype=float)

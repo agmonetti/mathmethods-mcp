@@ -174,7 +174,7 @@ class RootFindingService:
                 fx = float(f(x))
                 dfx = float(RootFindingService._derivada_numerica(f, x))
                 
-                if abs(dfx) < 1e-12:
+                if abs(dfx) < 1e-10:
                     raise ValueError("La derivada se hizo cero (tangente horizontal).")
                 
                 x_new = x - fx / dfx
