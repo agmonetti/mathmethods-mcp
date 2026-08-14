@@ -2,15 +2,8 @@
   "servers": {
     "modelo-mat-stdio": {
       "type": "stdio",
-      "command": "/absolute/path/to/uv",
-      "args": [
-        "run",
-        "--frozen",
-        "--project",
-        "/absolute/path/to/modelo-mat-mcp",
-        "python",
-        "/absolute/path/to/modelo-mat-mcp/server.py"
-      ]
+      "command": "uvx",
+      "args": ["mathmethods"]
     },
     "modelo-mat-http": {
       "type": "http",

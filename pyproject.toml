@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "MCP server exposing numerical-methods tools: bisection, Simpson 1/3, Runge-Kutta 4, Lagrange interpolation"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
 dependencies = [
     "mcp[cli]==1.14.1",
     "numpy>=1.26.0",
@@ -17,6 +18,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0", "ruff>=0.8.0"]
+
+[project.scripts]
+mathmethods = "mathmethods.server:run"
 
 [tool.setuptools.packages.find]
 include = ["mathmethods*"]

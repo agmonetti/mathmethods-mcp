@@ -1,12 +1,44 @@
 # MathematicalMethods MCP Server
 
+[![MCP Server](https://badge.mcpx.dev?type=server)](https://modelcontextprotocol.io/introduction)
+[![License](https://img.shields.io/github/license/agmonetti/mathmethods)](LICENSE)
+[![CI](https://github.com/agmonetti/mathmethods/actions/workflows/ci.yml/badge.svg)](https://github.com/agmonetti/mathmethods/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/mathmethods)](https://pypi.org/project/mathmethods/)
+
 A [Model Context Protocol](https://modelcontextprotocol.io) server that exposes a
 numerical-methods core as tools an LLM agent can call directly from a chat
-(VS Code, Claude Desktop, etc.).
+(VS Code, Zed, Claude, opencode, etc.). It is built on top of the
+numerical-methods engine of the academic project `modeladoYsimulacion-web`
+(UADE); the math core is **vendored** into this repository so the server is
+fully self-contained.
 
-Built on top of the numerical-methods engine of the academic project
-`modeladoYsimulacion-web` (UADE). The math core is **vendored** into this
-repository so the server is fully self-contained and publishable.
+## Quick start
+
+```bash
+claude mcp add mathmethods -- uvx mathmethods
+```
+
+Any MCP client registers the server with the same one-liner command —
+`uvx mathmethods` (a Python package that needs no cloning, venv or paths):
+
+```json
+{ "command": "uvx", "args": ["mathmethods"] }
+```
+
+<details>
+<summary>Run from a checkout instead (for development)</summary>
+
+```bash
+git clone https://github.com/agmonetti/mathmethods.git
+cd mathmethods
+uv sync --extra dev
+uv run mathmethods
+```
+
+Every client config below also works with
+`uv run --frozen --project <checkout> python <checkout>/server.py` in place of
+`uvx mathmethods`.
+</details>
 
 ## Tools
 
@@ -101,44 +133,29 @@ The transport can also be chosen with the `MCP_TRANSPORT` environment variable
 
 ## Connect from a client
 
-Every client below registers the same server. Replace the placeholders:
+Every client registers the **same command**, `uvx mathmethods` (no paths, no
+venv). If the server is not published yet or you work from a checkout, use
+`uv run --frozen --project <PROJ> python <PROJ>/server.py` instead.
 
-- `<UV>` — path to the `uv` binary (or just `uv` if it is on your `PATH`)
-- `<PROJ>` — absolute path to this checkout, e.g. `/home/me/modelo-mat-mcp`
-
-**Local (STDIO)** — the client launches the server for you; only needs `uv`:
-
-```
-<UV> run --frozen --project <PROJ> python <PROJ>/server.py
-```
-
-**Remote (Streamable HTTP)** — start it once in a terminal, then point the
-client at `http://127.0.0.1:8000/mcp`:
+**Remote (Streamable HTTP)** — optional; start it once in a terminal, then
+point the client at `http://127.0.0.1:8000/mcp`:
 
 ```bash
-MCP_TRANSPORT=streamable-http uv run python server.py
+MCP_TRANSPORT=streamable-http uvx mathmethods
 ```
 
 <details>
 <summary><b>VS Code</b></summary>
 
-Your `.vscode/mcp.json` is **machine-specific and git-ignored** (it contains
-local paths). Copy the template and adjust the paths:
-
-```bash
-cp mcp.example.json .vscode/mcp.json
-```
+Create `.vscode/mcp.json` (git-ignored) — or copy `mcp.example.json`:
 
 ```json
 {
   "servers": {
     "modelo-mat-stdio": {
       "type": "stdio",
-      "command": "<UV>",
-      "args": [
-        "run", "--frozen", "--project", "<PROJ>",
-        "python", "<PROJ>/server.py"
-      ]
+      "command": "uvx",
+      "args": ["mathmethods"]
     },
     "modelo-mat-http": {
       "type": "http",
@@ -148,10 +165,8 @@ cp mcp.example.json .vscode/mcp.json
 }
 ```
 
-Open `.vscode/mcp.json` and press **Start** next to the server you want. The
-STDIO entry is started on demand by VS Code; the HTTP entry needs the server
-already running (see above). Reload the window after editing
-(`Developer: Reload Window`) if the servers don't appear.
+Open the file and press **Start** next to the server you want; reload the
+window if it doesn't appear (`Developer: Reload Window`).
 
 </details>
 
@@ -165,19 +180,14 @@ Add the entry under `context_servers` (note: **not** `mcp_servers`) in
 {
   "context_servers": {
     "modelo-mat": {
-      "command": "<UV>",
-      "args": [
-        "run", "--frozen", "--project", "<PROJ>",
-        "python", "<PROJ>/server.py"
-      ]
+      "command": "uvx",
+      "args": ["mathmethods"]
     }
   }
 }
 ```
 
-You can also manage them via **Settings → AI → MCP Servers**. For the HTTP
-transport Zed connects natively over STDIO, so the local entry above is the
-recommended way.
+You can also manage them via **Settings → AI → MCP Servers**.
 
 </details>
 
@@ -193,7 +203,7 @@ global `~/.config/opencode/opencode.jsonc`:
   "mcp": {
     "modelo-mat": {
       "type": "local",
-      "command": ["<UV>", "run", "--frozen", "--project", "<PROJ>", "python", "<PROJ>/server.py"],
+      "command": ["uvx", "mathmethods"],
       "enabled": true
     }
   }
@@ -203,7 +213,7 @@ global `~/.config/opencode/opencode.jsonc`:
 Or register it with the CLI (equivalent):
 
 ```bash
-opencode mcp add modelo-mat -- <UV> run --frozen --project <PROJ> python <PROJ>/server.py
+opencode mcp add modelo-mat -- uvx mathmethods
 ```
 
 For a remote server running on `http://127.0.0.1:8000/mcp`:
@@ -234,11 +244,8 @@ Add the entry under `mcpServers` in the Antigravity config file, typically
 {
   "mcpServers": {
     "modelo-mat": {
-      "command": "<UV>",
-      "args": [
-        "run", "--frozen", "--project", "<PROJ>",
-        "python", "<PROJ>/server.py"
-      ]
+      "command": "uvx",
+      "args": ["mathmethods"]
     }
   }
 }
@@ -264,7 +271,7 @@ then inside the session:
 /mcp add
   Server name:  modelo-mat
   Server type:  1 (Local/STDIO)
-  Command:      <UV> run --frozen --project <PROJ> python <PROJ>/server.py
+  Command:      uvx mathmethods
 ```
 
 Press `Ctrl+S` to save. The settings are stored in
@@ -277,22 +284,22 @@ with `/mcp show`.
 <summary><b>Claude Desktop / Claude Code</b></summary>
 
 Both use the `mcpServers` format. In Claude Desktop, edit
-`claude_desktop_config.json`; in Claude Code use `claude mcp add`:
+`claude_desktop_config.json`; in Claude Code:
+
+```bash
+claude mcp add mathmethods -- uvx mathmethods
+```
 
 ```json
 {
   "mcpServers": {
     "modelo-mat": {
-      "command": "<UV>",
-      "args": [
-        "run", "--frozen", "--project", "<PROJ>",
-        "python", "<PROJ>/server.py"
-      ]
+      "command": "uvx",
+      "args": ["mathmethods"]
     }
   }
 }
 ```
-
 </details>
 
 ### Verify with the MCP Inspector
