@@ -1,4 +1,4 @@
-# MathematicalMethods MCP Server
+# Mathematical/Numerical Methods - MCP Server
 
 [![MCP Server](https://badge.mcpx.dev?type=server)](https://modelcontextprotocol.io/introduction)
 [![License](https://img.shields.io/github/license/agmonetti/mathmethods-mcp)](LICENSE)
