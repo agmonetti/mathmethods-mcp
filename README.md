@@ -57,31 +57,38 @@ pip install -r requirements.txt
 **Local (STDIO)** — default transport, used by VS Code / Claude Desktop:
 
 ```bash
-mcp run server.py
+uv run python server.py
 ```
 
 **Remote (Streamable HTTP)** — the server prints a URL such as `http://127.0.0.1:8000/mcp`:
 
 ```bash
-mcp run server.py --transport streamable-http --port 8000
+MCP_TRANSPORT=streamable-http uv run python server.py
 ```
 
 The transport can also be chosen with the `MCP_TRANSPORT` environment variable
-(`stdio` | `streamable-http` | `sse`).
+(`stdio` | `streamable-http` | `sse`), and the HTTP host/port with
+`MCP_HTTP_HOST` / `MCP_HTTP_PORT` (defaults `127.0.0.1:8000`).
 
 ## Connect from a client
 
 ### VS Code
 
-Register the server in `.vscode/mcp.json` (adjust the paths to your checkout):
+Register the server in `.vscode/mcp.json` (adjust the paths to your checkout).
+The STDIO entry below launches the server through `uv` (using the project's
+`.venv`/`uv.lock`); if you prefer a classic virtualenv, use `venv/bin/python`
+instead of `uv run`.
 
 ```json
 {
   "servers": {
     "modelo-mat-stdio": {
       "type": "stdio",
-      "command": "/absolute/path/to/modelo-mat-mcp/venv/bin/python",
-      "args": ["/absolute/path/to/modelo-mat-mcp/server.py"]
+      "command": "/absolute/path/to/uv",
+      "args": [
+        "run", "--frozen", "--project", "/absolute/path/to/modelo-mat-mcp",
+        "python", "/absolute/path/to/modelo-mat-mcp/server.py"
+      ]
     },
     "modelo-mat-http": {
       "type": "http",
@@ -89,6 +96,12 @@ Register the server in `.vscode/mcp.json` (adjust the paths to your checkout):
     }
   }
 }
+```
+
+For the HTTP entry, start the server first in a terminal:
+
+```bash
+MCP_TRANSPORT=streamable-http uv run python server.py
 ```
 
 With the STDIO entry you only need the server **running** for the HTTP entry;

@@ -2,8 +2,15 @@
   "servers": {
     "modelo-mat-stdio": {
       "type": "stdio",
-      "command": "/home/agus-hy/Documentos/modelo-mat-mcp/venv/bin/python",
-      "args": ["/home/agus-hy/Documentos/modelo-mat-mcp/server.py"]
+      "command": "/home/agus-hy/.local/bin/uv",
+      "args": [
+        "run",
+        "--frozen",
+        "--project",
+        "/home/agus-hy/Documentos/modelo-mat-mcp",
+        "python",
+        "/home/agus-hy/Documentos/modelo-mat-mcp/server.py"
+      ]
     },
     "modelo-mat-http": {
       "type": "http",
