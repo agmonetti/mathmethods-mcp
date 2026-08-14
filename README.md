@@ -1,9 +1,9 @@
 # MathematicalMethods MCP Server
 
 [![MCP Server](https://badge.mcpx.dev?type=server)](https://modelcontextprotocol.io/introduction)
-[![License](https://img.shields.io/github/license/agmonetti/mathmethods)](LICENSE)
-[![CI](https://github.com/agmonetti/mathmethods/actions/workflows/ci.yml/badge.svg)](https://github.com/agmonetti/mathmethods/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/mathmethods)](https://pypi.org/project/mathmethods/)
+[![License](https://img.shields.io/github/license/agmonetti/mathmethods-mcp)](LICENSE)
+[![CI](https://github.com/agmonetti/mathmethods-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/agmonetti/mathmethods-mcp/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/mathmethods-mcp)](https://pypi.org/project/mathmethods-mcp/)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that exposes a
 numerical-methods core as tools an LLM agent can call directly from a chat
@@ -15,11 +15,11 @@ fully self-contained.
 ## Quick start
 
 ```bash
-claude mcp add mathmethods -- uvx mathmethods
+claude mcp add mathmethods-mcp -- uvx mathmethods-mcp
 ```
 
 Any MCP client registers the server with the same one-liner command —
-`uvx mathmethods` (a Python package that needs no cloning, venv or paths):
+`uvx mathmethods-mcp` (a Python package that needs no cloning, venv or paths):
 
 ```json
 { "command": "uvx", "args": ["mathmethods"] }
@@ -29,7 +29,7 @@ Any MCP client registers the server with the same one-liner command —
 <summary>Run from a checkout instead (for development)</summary>
 
 ```bash
-git clone https://github.com/agmonetti/mathmethods.git
+git clone https://github.com/agmonetti/mathmethods-mcp.git
 cd mathmethods
 uv sync --extra dev
 uv run mathmethods
@@ -37,7 +37,7 @@ uv run mathmethods
 
 Every client config below also works with
 `uv run --frozen --project <checkout> python <checkout>/server.py` in place of
-`uvx mathmethods`.
+`uvx mathmethods-mcp`.
 </details>
 
 ## Tools
@@ -161,7 +161,7 @@ The transport can also be chosen with the `MCP_TRANSPORT` environment variable
 
 ## Connect from a client
 
-Every client registers the **same command**, `uvx mathmethods` (no paths, no
+Every client registers the **same command**, `uvx mathmethods-mcp` (no paths, no
 venv). If the server is not published yet or you work from a checkout, use
 `uv run --frozen --project <PROJ> python <PROJ>/server.py` instead.
 
@@ -169,7 +169,7 @@ venv). If the server is not published yet or you work from a checkout, use
 point the client at `http://127.0.0.1:8000/mcp`:
 
 ```bash
-MCP_TRANSPORT=streamable-http uvx mathmethods
+MCP_TRANSPORT=streamable-http uvx mathmethods-mcp
 ```
 
 <details>
@@ -241,7 +241,7 @@ global `~/.config/opencode/opencode.jsonc`:
 Or register it with the CLI (equivalent):
 
 ```bash
-opencode mcp add modelo-mat -- uvx mathmethods
+opencode mcp add modelo-mat -- uvx mathmethods-mcp
 ```
 
 For a remote server running on `http://127.0.0.1:8000/mcp`:
@@ -299,7 +299,7 @@ then inside the session:
 /mcp add
   Server name:  modelo-mat
   Server type:  1 (Local/STDIO)
-  Command:      uvx mathmethods
+  Command:      uvx mathmethods-mcp
 ```
 
 Press `Ctrl+S` to save. The settings are stored in
@@ -315,7 +315,7 @@ Both use the `mcpServers` format. In Claude Desktop, edit
 `claude_desktop_config.json`; in Claude Code:
 
 ```bash
-claude mcp add mathmethods -- uvx mathmethods
+claude mcp add mathmethods-mcp -- uvx mathmethods-mcp
 ```
 
 ```json
@@ -389,7 +389,7 @@ uv build
 uv publish          # requires a PyPI token: `uv login` or UV_PUBLISH_TOKEN
 ```
 
-Once published, every client config just works with `uvx mathmethods` (no
+Once published, every client config just works with `uvx mathmethods-mcp` (no
 paths, no venv). Bump `version` in `pyproject.toml` before each release.
 
 ## Keeping the vendored core in sync

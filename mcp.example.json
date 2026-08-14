@@ -3,7 +3,7 @@
     "modelo-mat-stdio": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["mathmethods"]
+      "args": ["mathmethods-mcp"]
     },
     "modelo-mat-http": {
       "type": "http",

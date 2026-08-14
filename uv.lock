@@ -196,7 +196,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mathmethods"
+name = "mathmethods-mcp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

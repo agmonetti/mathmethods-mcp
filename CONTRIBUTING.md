@@ -12,7 +12,7 @@ simple — that is a feature, not a limitation. Keep the spirit:
 ## Setup
 
 ```bash
-git clone https://github.com/agmonetti/mathmethods.git
+git clone https://github.com/agmonetti/mathmethods-mcp.git
 cd mathmethods
 uv sync --extra dev
 uv run pytest
