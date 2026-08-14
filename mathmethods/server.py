@@ -9,12 +9,14 @@ from __future__ import annotations
 import math
 import os
 import re
+from collections.abc import Callable
 
 import numpy as np
 from mcp.server.fastmcp import FastMCP
 
 from mathmethods import compiler
 from mathmethods.core import (
+    differentiation,
     dynamic_1d,
     dynamic_2d_conservative,
     dynamic_2d_lanchester,
@@ -249,33 +251,7 @@ def ode_rk4(
         Dict with the numerical solution table, exact solution (when SymPy can
         solve it) and per-step errors.
     """
-    x0 = _clean_float(x0, "x0")
-    y0 = _clean_float(y0, "y0")
-    xf = _clean_float(xf, "xf")
-    h = _clean_float(h, "h", positive=True)
-    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
-    _require(xf > x0, "xf must be greater than x0.")
-    if tol is not None:
-        tol = _clean_float(tol, "tol", positive=True)
-
-    n_steps = round((xf - x0) / h)
-    _require(1 <= n_steps <= MAX_ODE_STEPS, "step count must be between 1 and 2000.")
-
-    normalized = compiler.validate(ecuacion_str, variables=("x", "y"))
-    result = ode.ODEService.ejecutar_metodo(
-        "rk4",
-        normalized,
-        x0,
-        y0,
-        xf,
-        h,
-        precision=precision,
-        tol=tol,
-    )
-    return _finalize(
-        result,
-        downsample_keys=("x_plot", "y_plot", "y_exacta_plot"),
-    )
+    return _ode_solve("rk4", ecuacion_str, x0, y0, xf, h, tol, precision)
 
 
 @mcp.tool()
@@ -995,6 +971,435 @@ def dynamic_2d_nonhomogeneous_solve(
     }
     result = dynamic_2d_non_homogeneous.Dynamic2DNonHomogeneousService.solve(payload)
     return _finalize_deep(result)
+
+
+# --------------------------------------------------------------------------
+# Root finding (extended)
+# --------------------------------------------------------------------------
+def _compile_root(func_str: str) -> Callable:
+    normalized = compiler.validate(func_str, variables=("x",))
+    return root_finding.RootFindingService.compilar_funcion(normalized)
+
+
+@mcp.tool()
+def root_newton_raphson(
+    func_str: str,
+    x0: float,
+    tol: float = 1e-6,
+    max_iter: int = 100,
+    precision: int = 8,
+) -> dict:
+    """Find a root of f(x) = 0 with the Newton-Raphson method (numeric derivative).
+
+    Args:
+        func_str: Math expression in x.
+        x0: Initial guess.
+        tol: Convergence tolerance.
+        max_iter: Maximum iterations.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the root, iteration table and convergence flag.
+    """
+    x0 = _clean_float(x0, "x0")
+    tol = _clean_float(tol, "tol", positive=True)
+    max_iter = _clean_int(max_iter, "max_iter", minimum=1, maximum=MAX_ITERATIONS)
+    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
+
+    func = _compile_root(func_str)
+    result = root_finding.RootFindingService.newton_raphson(
+        func, x0, tol=tol, max_iter=max_iter, precision=precision
+    )
+    return _finalize(result)
+
+
+@mcp.tool()
+def root_punto_fijo(
+    g_str: str,
+    x0: float,
+    tol: float = 1e-6,
+    max_iter: int = 100,
+    precision: int = 8,
+) -> dict:
+    """Find a fixed point of g(x) = x with the fixed-point iteration method.
+
+    Converges when |g'(x)| < 1 near the root (Lipschitz check is reported).
+
+    Args:
+        g_str: Math expression for the iteration function g(x).
+        x0: Initial guess.
+        tol: Convergence tolerance.
+        max_iter: Maximum iterations.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the fixed point, the Lipschitz check, iteration table and convergence flag.
+    """
+    x0 = _clean_float(x0, "x0")
+    tol = _clean_float(tol, "tol", positive=True)
+    max_iter = _clean_int(max_iter, "max_iter", minimum=1, maximum=MAX_ITERATIONS)
+    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
+
+    func = _compile_root(g_str)
+    result = root_finding.RootFindingService.punto_fijo(
+        func, x0, tol=tol, max_iter=max_iter, precision=precision
+    )
+    return _finalize(result)
+
+
+@mcp.tool()
+def root_aitken(
+    g_str: str,
+    x0: float,
+    tol: float = 1e-6,
+    max_iter: int = 100,
+    precision: int = 8,
+) -> dict:
+    """Accelerate fixed-point iteration with Aitken's delta-squared method.
+
+    Args:
+        g_str: Math expression for the iteration function g(x).
+        x0: Initial guess.
+        tol: Convergence tolerance.
+        max_iter: Maximum iterations.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the accelerated root, iteration table and convergence flag.
+    """
+    x0 = _clean_float(x0, "x0")
+    tol = _clean_float(tol, "tol", positive=True)
+    max_iter = _clean_int(max_iter, "max_iter", minimum=1, maximum=MAX_ITERATIONS)
+    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
+
+    func = _compile_root(g_str)
+    result = root_finding.RootFindingService.aitken(
+        func, x0, tol=tol, max_iter=max_iter, precision=precision
+    )
+    return _finalize(result)
+
+
+@mcp.tool()
+def root_comparar(
+    func_str: str,
+    g_str: str,
+    a: float,
+    b: float,
+    x0: float,
+    tol: float = 1e-6,
+    max_iter: int = 100,
+    precision: int = 8,
+) -> dict:
+    """Compare bisection, fixed-point, Newton-Raphson and Aitken on the same problem.
+
+    Args:
+        func_str: Math expression for f(x) (used by bisection/Newton).
+        g_str: Math expression for g(x) (used by fixed-point/Aitken).
+        a, b: Bracket for bisection (f(a) and f(b) must differ in sign).
+        x0: Initial guess.
+        tol, max_iter, precision: Shared tolerances.
+
+    Returns:
+        Dict with per-method results.
+    """
+    a = _clean_float(a, "a")
+    b = _clean_float(b, "b")
+    x0 = _clean_float(x0, "x0")
+    tol = _clean_float(tol, "tol", positive=True)
+    max_iter = _clean_int(max_iter, "max_iter", minimum=1, maximum=MAX_ITERATIONS)
+    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
+    _require(b > a, "b must be greater than a.")
+
+    compiler.validate(func_str, variables=("x",))
+    compiler.validate(g_str, variables=("x",))
+    result = root_finding.RootFindingService.comparar_metodos(
+        func_str, g_str, a, b, x0, tol=tol, max_iter=max_iter, precision=precision
+    )
+    return _finalize(result)
+
+
+# --------------------------------------------------------------------------
+# Integration (extended)
+# --------------------------------------------------------------------------
+def _compile_integrand(func_str: str) -> Callable:
+    normalized = compiler.validate(func_str, variables=("x",))
+    return integration.IntegrationService.compilar_funcion(normalized)
+
+
+def _integral_bounds(a: float, b: float, n: int, precision: int, epsilon):
+    a = _clean_float(a, "a")
+    b = _clean_float(b, "b")
+    n = _clean_int(n, "n", minimum=1, maximum=MAX_SUBINTERVALS)
+    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
+    _require(b > a, "b must be greater than a.")
+    if epsilon is not None:
+        epsilon = _clean_float(epsilon, "epsilon")
+    return a, b, n, precision, epsilon
+
+
+@mcp.tool()
+def integral_rectangulo(
+    func_str: str,
+    a: float,
+    b: float,
+    n: int,
+    epsilon: float | None = None,
+    precision: int = 8,
+) -> dict:
+    """Approximate ∫ₐᵇ f(x) dx with the composite midpoint (rectangle) rule.
+
+    Args:
+        func_str: Math expression in x.
+        a, b: Integration limits (b > a).
+        n: Number of subintervals.
+        epsilon: Optional point in [a, b] for the truncation error bound.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the integral, error estimates and table.
+    """
+    a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
+    func = _compile_integrand(func_str)
+    result = integration.IntegrationService.rectangulo_compuesto(
+        func, a, b, n=n, precision=precision, epsilon=epsilon
+    )
+    return _finalize(result)
+
+
+@mcp.tool()
+def integral_trapecio(
+    func_str: str,
+    a: float,
+    b: float,
+    n: int,
+    epsilon: float | None = None,
+    precision: int = 8,
+) -> dict:
+    """Approximate ∫ₐᵇ f(x) dx with the composite trapezoidal rule.
+
+    Args:
+        func_str: Math expression in x.
+        a, b: Integration limits (b > a).
+        n: Number of subintervals.
+        epsilon: Optional point in [a, b] for the truncation error bound.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the integral, error estimates and table.
+    """
+    a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
+    func = _compile_integrand(func_str)
+    result = integration.IntegrationService.trapecio_compuesto(
+        func, a, b, n=n, precision=precision, epsilon=epsilon
+    )
+    return _finalize(result)
+
+
+@mcp.tool()
+def integral_simpson38(
+    func_str: str,
+    a: float,
+    b: float,
+    n: int,
+    epsilon: float | None = None,
+    precision: int = 8,
+) -> dict:
+    """Approximate ∫ₐᵇ f(x) dx with the composite Simpson 3/8 rule.
+
+    Args:
+        func_str: Math expression in x.
+        a, b: Integration limits (b > a).
+        n: Number of subintervals (must be a multiple of 3).
+        epsilon: Optional point in [a, b] for the truncation error bound.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the integral, error estimates and table.
+    """
+    a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
+    _require(n % 3 == 0, "n must be a multiple of 3 for Simpson 3/8.")
+    func = _compile_integrand(func_str)
+    result = integration.IntegrationService.simpson_38_compuesto(
+        func, a, b, n=n, precision=precision, epsilon=epsilon
+    )
+    return _finalize(result)
+
+
+@mcp.tool()
+def integral_comparar(
+    func_str: str,
+    a: float,
+    b: float,
+    n: int,
+    epsilon: float | None = None,
+    precision: int = 8,
+) -> dict:
+    """Compare rectangle, trapezoid, Simpson 1/3 and Simpson 3/8 on the same integral.
+
+    Args:
+        func_str: Math expression in x.
+        a, b: Integration limits (b > a).
+        n: Number of subintervals (Simpson 1/3 needs even, 3/8 needs multiple of 3).
+        epsilon, precision: Error-bound and rounding settings.
+
+    Returns:
+        Dict with per-method results and success flags.
+    """
+    a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
+    compiler.validate(func_str, variables=("x",))
+    result = integration.IntegrationService.comparar_metodos(
+        func_str, a, b, n=n, precision=precision, epsilon=epsilon
+    )
+    return _finalize(result)
+
+
+# --------------------------------------------------------------------------
+# ODE (Euler / Heun) and Monte Carlo convergence
+# --------------------------------------------------------------------------
+def _ode_solve(metodo: str, ecuacion_str, x0, y0, xf, h, tol, precision) -> dict:
+    x0 = _clean_float(x0, "x0")
+    y0 = _clean_float(y0, "y0")
+    xf = _clean_float(xf, "xf")
+    h = _clean_float(h, "h", positive=True)
+    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
+    _require(xf > x0, "xf must be greater than x0.")
+    if tol is not None:
+        tol = _clean_float(tol, "tol", positive=True)
+
+    n_steps = round((xf - x0) / h)
+    _require(1 <= n_steps <= MAX_ODE_STEPS, "step count must be between 1 and 2000.")
+
+    normalized = compiler.validate(ecuacion_str, variables=("x", "y"))
+    result = ode.ODEService.ejecutar_metodo(
+        metodo, normalized, x0, y0, xf, h, precision=precision, tol=tol
+    )
+    return _finalize(result, downsample_keys=("x_plot", "y_plot", "y_exacta_plot"))
+
+
+@mcp.tool()
+def ode_euler(
+    ecuacion_str: str,
+    x0: float,
+    y0: float,
+    xf: float,
+    h: float,
+    tol: float | None = None,
+    precision: int = 8,
+) -> dict:
+    """Solve y'(x) = f(x, y), y(x0) = y0 with the explicit Euler method (1st order).
+
+    Args:
+        ecuacion_str: Right-hand side f(x, y).
+        x0, y0: Initial condition.
+        xf: Final x (must be > x0).
+        h: Step size (must be positive).
+        tol: Optional tolerance flag for the final error.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the numerical solution, exact solution (when available) and errors.
+    """
+    return _ode_solve("euler", ecuacion_str, x0, y0, xf, h, tol, precision)
+
+
+@mcp.tool()
+def ode_heun(
+    ecuacion_str: str,
+    x0: float,
+    y0: float,
+    xf: float,
+    h: float,
+    tol: float | None = None,
+    precision: int = 8,
+) -> dict:
+    """Solve y'(x) = f(x, y), y(x0) = y0 with Heun's predictor-corrector method (2nd order).
+
+    Args:
+        ecuacion_str: Right-hand side f(x, y).
+        x0, y0: Initial condition.
+        xf: Final x (must be > x0).
+        h: Step size (must be positive).
+        tol: Optional tolerance flag for the final error.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the numerical solution, exact solution (when available) and errors.
+    """
+    return _ode_solve("heun", ecuacion_str, x0, y0, xf, h, tol, precision)
+
+
+@mcp.tool()
+def mc_convergencia_1d(
+    func_str: str,
+    a: float,
+    b: float,
+    N: int = 10000,
+    seed: int | None = None,
+    precision: int = 8,
+) -> dict:
+    """Show how the mean-value Monte Carlo estimate converges as samples accumulate.
+
+    Args:
+        func_str: Math expression in x.
+        a, b: Integration limits (b > a).
+        N: Total number of samples.
+        seed: Optional RNG seed.
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the cumulative running average over the samples.
+    """
+    a = _clean_float(a, "a")
+    b = _clean_float(b, "b")
+    N = _clean_int(N, "N", minimum=1, maximum=MAX_MC_N)
+    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
+    _require(b > a, "b must be greater than a.")
+    if seed is not None:
+        seed = _clean_int(seed, "seed", minimum=0, maximum=2**31 - 1)
+
+    normalized = compiler.validate(func_str, variables=("x",))
+    func = monte_carlo.MonteCarloService.compilar_funcion(normalized, variables="x")
+    result = monte_carlo.MonteCarloService.convergencia_1d(
+        func, a, b, N=N, seed=seed, precision=precision
+    )
+    return _finalize_deep(result)
+
+
+# --------------------------------------------------------------------------
+# Differentiation
+# --------------------------------------------------------------------------
+@mcp.tool()
+def finite_differences(
+    func_str: str,
+    x_val: float,
+    h: float = 1e-5,
+    precision: int = 8,
+) -> dict:
+    """Approximate the first and second derivatives of f(x) at x with finite differences.
+
+    Computes forward, backward and central differences for the first derivative,
+    plus the central second derivative, and compares each against the exact
+    derivative from SymPy.
+
+    Args:
+        func_str: Math expression in x.
+        x_val: Point where the derivative is evaluated.
+        h: Step size (small, positive).
+        precision: Rounding digits.
+
+    Returns:
+        Dict with the exact and numerical derivatives and their errors.
+    """
+    x_val = _clean_float(x_val, "x_val")
+    h = _clean_float(h, "h", positive=True)
+    precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
+    _require(h < 1.0, "h should be small (typically <= 1e-3).")
+
+    normalized = compiler.validate(func_str, variables=("x",))
+    result = differentiation.DifferentiationService.calcular_diferencias_completas(
+        normalized, x_val=x_val, h=h, precision=precision
+    )
+    return _finalize(result)
 
 
 def run() -> None:

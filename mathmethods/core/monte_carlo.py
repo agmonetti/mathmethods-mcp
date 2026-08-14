@@ -128,7 +128,9 @@ class MonteCarloService:
         x_rand = np.random.uniform(a, b, N)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            f_eval = np.nan_to_num(f(x_rand), nan=0.0)
+            f_raw = f(x_rand)
+        n_no_finitos = int(np.sum(~np.isfinite(f_raw)))
+        f_eval = np.nan_to_num(f_raw, nan=0.0, posinf=0.0, neginf=0.0)
             
         promedios_acumulados = np.cumsum(f_eval) / np.arange(1, N + 1)
         integrales_acumuladas = (b - a) * promedios_acumulados
@@ -152,7 +154,8 @@ class MonteCarloService:
             "metodo": "Convergencia 1D",
             "N": N,
             "valor_exacto_gauss": round(float(valor_exacto), precision),
-            "historial_convergencia": historial
+            "historial_convergencia": historial,
+            "notas": ([f"{n_no_finitos} muestra(s) no finita(s) se trataron como 0; el resultado puede estar sesgado."] if n_no_finitos > 0 else [])
         }
 
     @staticmethod
@@ -161,8 +164,9 @@ class MonteCarloService:
         x_rand = np.random.uniform(a, b, N)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            f_eval = f(x_rand)
-            f_eval = np.nan_to_num(f_eval, nan=0.0, posinf=0.0, neginf=0.0)
+            f_raw = f(x_rand)
+        n_no_finitos = int(np.sum(~np.isfinite(f_raw)))
+        f_eval = np.nan_to_num(f_raw, nan=0.0, posinf=0.0, neginf=0.0)
         
         promedio = np.mean(f_eval)
         escala = b - a
@@ -178,13 +182,20 @@ class MonteCarloService:
         limite = min(N, 2000)
         historial = [{"i": i+1, "x": round(float(x_rand[i]), precision), "f_x": round(float(f_eval[i]), precision)} for i in range(limite)]
         
+        notas = []
+        if n_no_finitos > 0:
+            notas.append(
+                f"{n_no_finitos} muestra(s) no finita(s) se trataron como 0; el resultado puede estar sesgado."
+            )
+        
         return {
             "metodo": "Valor Promedio 1D", "integral": round(float(integral), precision),
             "media_muestral": round(float(promedio), precision),
             "promedio_fx": round(float(promedio), precision), "escala": round(float(escala), precision),
             "desv_estandar": round(float(desv_std), precision), "error_std": round(float(error_est), precision),
             "z_score": round(float(z_score), 4), "ic_inf": round(float(ic_inf), precision),
-            "ic_sup": round(float(ic_sup), precision), "N": N, "historial": historial
+            "ic_sup": round(float(ic_sup), precision), "N": N, "historial": historial,
+            "notas": notas
         }
 
     @staticmethod
@@ -197,8 +208,9 @@ class MonteCarloService:
         
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            f_eval = f(x_rand, y_rand)
-            f_eval = np.nan_to_num(f_eval, nan=0.0, posinf=0.0, neginf=0.0)
+            f_raw = f(x_rand, y_rand)
+        n_no_finitos = int(np.sum(~np.isfinite(f_raw)))
+        f_eval = np.nan_to_num(f_raw, nan=0.0, posinf=0.0, neginf=0.0)
             
         escala = (bx - ax) * (by - ay)
         promedio = np.mean(f_eval)
@@ -220,7 +232,8 @@ class MonteCarloService:
             "promedio_fxy": round(float(promedio), precision), "escala": round(float(escala), precision),
             "desv_estandar": round(float(desv_std), precision), "error_std": round(float(error_est), precision),
             "z_score": round(float(z_score), 4), "ic_inf": round(float(ic_inf), precision),
-            "ic_sup": round(float(ic_sup), precision), "N": N, "historial": historial
+            "ic_sup": round(float(ic_sup), precision), "N": N, "historial": historial,
+            "notas": ([f"{n_no_finitos} muestra(s) no finita(s) se trataron como 0; el resultado puede estar sesgado."] if n_no_finitos > 0 else [])
         }
 
     @staticmethod
@@ -234,8 +247,9 @@ class MonteCarloService:
         
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            f_eval = f(x_rand, y_rand, z_rand)
-            f_eval = np.nan_to_num(f_eval, nan=0.0, posinf=0.0, neginf=0.0)
+            f_raw = f(x_rand, y_rand, z_rand)
+        n_no_finitos = int(np.sum(~np.isfinite(f_raw)))
+        f_eval = np.nan_to_num(f_raw, nan=0.0, posinf=0.0, neginf=0.0)
             
         escala = (bx - ax) * (by - ay) * (bz - az)
         promedio = np.mean(f_eval)
@@ -256,7 +270,8 @@ class MonteCarloService:
             "promedio_fxyz": round(float(promedio), precision), "escala": round(float(escala), precision),
             "desv_estandar": round(float(desv_std), precision), "error_std": round(float(error_est), precision),
             "z_score": round(float(z_score), 4), "ic_inf": round(float(ic_inf), precision),
-            "ic_sup": round(float(ic_sup), precision), "N": N, "historial": historial
+            "ic_sup": round(float(ic_sup), precision), "N": N, "historial": historial,
+            "notas": ([f"{n_no_finitos} muestra(s) no finita(s) se trataron como 0; el resultado puede estar sesgado."] if n_no_finitos > 0 else [])
         }
 
     @staticmethod

@@ -60,7 +60,8 @@ class Dynamic2DNonHomogeneousService:
 
     @staticmethod
     def rk4_sistema(A, B, X0, t0, t_fin, h):
-        t_vals = np.arange(t0, t_fin + h, h)
+        n_steps_t = max(1, int(round((t_fin - t0) / h)))
+        t_vals = np.linspace(t0, t_fin, n_steps_t + 1)
         X_vals = np.zeros((len(t_vals), 2))
         X_vals[0] = X0
 
@@ -269,7 +270,7 @@ class Dynamic2DNonHomogeneousService:
                 if equilibrio_pnto:
                     Xp = np.array([equilibrio_pnto['x'], equilibrio_pnto['y']])
                 Xp_sym = sp.Matrix(Xp)
-                sol_particular_latex = [f"X_p = \\begin{{pmatrix}} {Xp[0]:.0f} \\\\ {Xp[1]:.0f} \\end{{pmatrix}}"]
+                sol_particular_latex = [f"X_p = \\begin{{pmatrix}} {Xp[0]:g} \\\\ {Xp[1]:g} \\end{{pmatrix}}"]
 
             constantes = {"c1": "C1", "c2": "C2"}
 
@@ -633,7 +634,7 @@ class Dynamic2DNonHomogeneousService:
                 if equilibrio_pnto:
                     Xp = np.array([equilibrio_pnto['x'], equilibrio_pnto['y']])
                 # Mostrar la solución particular redondeada a 0 decimales para presentación
-                sol_particular_latex = [f"X_p = \\begin{{pmatrix}} {Xp[0]:.0f} \\\\ {Xp[1]:.0f} \\end{{pmatrix}}"]
+                sol_particular_latex = [f"X_p = \\begin{{pmatrix}} {Xp[0]:g} \\\\ {Xp[1]:g} \\end{{pmatrix}}"]
 
             # 3. No calculamos numéricamente C1, C2: los dejamos simbólicos
             constantes = {"c1": "C1", "c2": "C2"}
@@ -691,7 +692,6 @@ class Dynamic2DNonHomogeneousService:
             "autovectores": list_autovectores,
             "autovectores_normalizados": autovectores_normalizados,
             "autovectores_relaciones_latex": autovectores_relaciones_latex,
-            "autovectores_parametricos_latex": autovectores_parametricos_latex,
             "autovectores_parametricos_latex": autovectores_parametricos_latex,
             "autovectores_pasos_latex": autovectores_pasos_latex,
             "autovectores_relaciones_text": autovectores_relaciones_text,

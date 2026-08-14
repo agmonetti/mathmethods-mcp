@@ -58,7 +58,8 @@ class Dynamic2DLinearService:
 
     @staticmethod
     def rk4_sistema(A, B, X0, t0, t_fin, h):
-        t_vals = np.arange(t0, t_fin + h, h)
+        n_steps_t = max(1, int(round((t_fin - t0) / h)))
+        t_vals = np.linspace(t0, t_fin, n_steps_t + 1)
         X_vals = np.zeros((len(t_vals), 2))
         X_vals[0] = X0
 

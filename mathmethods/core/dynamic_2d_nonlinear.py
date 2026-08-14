@@ -195,7 +195,8 @@ class Dynamic2DNonLinearService:
             except:
                 return None
 
-        t_vals = np.arange(t0, t_fin + h, h)
+        n_steps_t = max(1, int(round((t_fin - t0) / h)))
+        t_vals = np.linspace(t0, t_fin, n_steps_t + 1)
         X_main = [np.array([x0, y0])]
         for _ in range(len(t_vals) - 1):
             curr = X_main[-1]

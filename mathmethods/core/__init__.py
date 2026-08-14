@@ -6,6 +6,7 @@ with the upstream repo when that code changes.
 """
 
 from . import (
+    differentiation,
     dynamic_1d,
     dynamic_2d_conservative,
     dynamic_2d_lanchester,
@@ -20,6 +21,7 @@ from . import (
 )
 
 __all__ = [
+    "differentiation",
     "dynamic_1d",
     "dynamic_2d_conservative",
     "dynamic_2d_lanchester",
