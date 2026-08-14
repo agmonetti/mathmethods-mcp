@@ -43,7 +43,7 @@ ALLOWED_FUNCTIONS = frozenset(
 _LOGIC_KEYWORDS = frozenset({"and", "or", "not"})
 _CONSTANTS = frozenset({"e", "E", "pi"})
 
-_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_IDENTIFIER_RE = re.compile(r"[^\W\d_]\w*", re.UNICODE)
 _NUMBER_RE = re.compile(r"(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
 _SINGLE_VAR = re.compile(r"(?<![A-Za-z0-9_])[eE]\^")
 _ALLOWED_PUNCTUATION = set("()+-,*/%<>!=:")

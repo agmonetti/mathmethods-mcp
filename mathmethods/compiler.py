@@ -55,7 +55,9 @@ ALLOWED_FUNCTIONS: frozenset[str] = frozenset(
 _BUILTIN_CONSTANTS = {"e": sp.E, "pi": sp.pi, "E": sp.E}
 
 _SINGLE_VAR = re.compile(r"(?<![A-Za-z0-9_])[eE]\^")
-_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# Unicode letters (incl. Greek symbols like α, β) start identifiers; digits
+# and leading underscores are rejected by the lexical gate.
+_IDENTIFIER_RE = re.compile(r"[^\W\d_]\w*", re.UNICODE)
 _NUMBER_RE = re.compile(r"(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
 _ALLOWED_PUNCTUATION = set("()+-,*/%<>!=:")
 

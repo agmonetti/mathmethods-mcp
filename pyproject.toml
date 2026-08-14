@@ -12,6 +12,7 @@ dependencies = [
     "mcp[cli]==1.14.1",
     "numpy>=1.26.0",
     "sympy>=1.12.0",
+    "scipy>=1.11.0",
 ]
 
 [project.optional-dependencies]
@@ -32,4 +33,5 @@ extend-exclude = ["mathmethods/core"]
 select = ["E", "F", "I", "UP", "B", "RUF"]
 # B017: tests deliberately assert blind Exception for invalid inputs.
 # BLE001: validation code intentionally catches broad exceptions.
-ignore = ["B017", "BLE001"]
+# RUF001/002/003: math symbols (α, β, ×) are intentional in this domain.
+ignore = ["B017", "BLE001", "RUF001", "RUF002", "RUF003"]
