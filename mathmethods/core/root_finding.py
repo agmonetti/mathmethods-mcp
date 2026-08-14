@@ -35,6 +35,8 @@ class RootFindingService:
         except:
             raise ValueError("Error al evaluar f(a) o f(b). Asegúrese de que la función es válida en el intervalo.")
             
+        if not (math.isfinite(fa) and math.isfinite(fb)):
+            raise ValueError("f(a) o f(b) no es finito. La función no está definida o diverge en el intervalo.")
         if fa * fb >= 0:
             raise ValueError("f(a) y f(b) deben tener signos opuestos (f(a) * f(b) < 0).")
         
