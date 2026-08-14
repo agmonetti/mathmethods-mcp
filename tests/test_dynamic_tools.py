@@ -81,6 +81,19 @@ def test_dynamic_1d_bifurcation_verhulst():
     assert len(res["phase_slices"]) == 3
 
 
+def test_dynamic_1d_bifurcation_custom_param_in_expression():
+    # f(x; r) = r + x^2 (saddle-node): el parámetro r aparece en la expresión
+    res = dynamic_1d_bifurcation(func_str="r + x**2", model="custom", bif_param="r", bif_steps=10)
+    assert len(res["bifurcation"]["equilibria"]) > 0
+
+
+def test_dynamic_1d_solve_custom_with_params():
+    # x' = -k*x con k paramétrico
+    res = dynamic_1d_solve(func_str="-k*x", model="custom", params={"k": 0.5}, initial_conditions=[2.0])
+    assert res["equilibria"]
+    assert abs(res["equilibria"][0]["x"]) < 1e-6
+
+
 def test_dynamic_1d_equilibria():
     res = dynamic_1d_equilibria(func_str="x**2 - 4", model="custom")
     assert res["equilibria"]
@@ -114,6 +127,13 @@ def test_dynamic_2d_conservative():
 
 def test_dynamic_2d_lanchester():
     res = dynamic_2d_lanchester_solve()
+    assert res["is_classic"] is True
+    assert res["winner_analytic"] in ("Ejército X (Rojo)", "Ejército Y (Azul)", "Empate (Aniquilación Mutua)")
+
+
+def test_dynamic_2d_lanchester_latin_symbol_names():
+    # Debe aceptar tanto α como "alpha" en las ecuaciones
+    res = dynamic_2d_lanchester_solve(eq_x="-alpha*y", eq_y="-beta*x", alpha=1, beta=2, x0=100, y0=80)
     assert res["is_classic"] is True
     assert res["winner_analytic"] in ("Ejército X (Rojo)", "Ejército Y (Azul)", "Empate (Aniquilación Mutua)")
 

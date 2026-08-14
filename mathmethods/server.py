@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 
 import numpy as np
 from mcp.server.fastmcp import FastMCP
@@ -600,7 +601,7 @@ def dynamic_1d_solve(
         initial_conditions = [0.5]
 
     if model == "custom":
-        compiler.validate(func_str, variables=("x",))
+        compiler.validate(func_str, variables=("x", *params.keys()))
     elif model not in ("malthus", "verhulst", "newton"):
         raise ValueError("model must be one of: custom, malthus, verhulst, newton.")
 
@@ -638,7 +639,7 @@ def dynamic_1d_equilibria(
     _require(x_max > x_min, "x_max must be greater than x_min.")
 
     if model == "custom":
-        compiler.validate(func_str, variables=("x",))
+        compiler.validate(func_str, variables=("x", *params.keys()))
     elif model not in ("malthus", "verhulst", "newton"):
         raise ValueError("model must be one of: custom, malthus, verhulst, newton.")
 
@@ -696,7 +697,7 @@ def dynamic_1d_bifurcation(
     _require(x_max > x_min, "x_max must be greater than x_min.")
 
     if model == "custom":
-        compiler.validate(func_str, variables=("x",))
+        compiler.validate(func_str, variables=("x", bif_param, *params.keys()))
     elif model not in ("malthus", "verhulst", "newton"):
         raise ValueError("model must be one of: custom, malthus, verhulst, newton.")
     _require(
@@ -920,6 +921,15 @@ def dynamic_2d_lanchester_solve(
     _require(t_fin > t0, "t_fin must be greater than t0.")
     steps = round((t_fin - t0) / h)
     _require(1 <= steps <= MAX_DYN_STEPS, "step count must be between 1 and 5000.")
+
+    # Aceptar tanto los símbolos griegos (α) como sus nombres latinos (alpha).
+    _GREEK_NAMES = {
+        "alpha": "α", "beta": "β", "gamma": "γ",
+        "epsilon": "ε", "mu": "μ", "delta": "δ",
+    }
+    for latin, greek in _GREEK_NAMES.items():
+        eq_x = re.sub(rf"\b{latin}\b", greek, eq_x)
+        eq_y = re.sub(rf"\b{latin}\b", greek, eq_y)
 
     gate = ("x", "y", "α", "β", "γ", "ε", "μ", "δ")
     compiler.validate(eq_x, variables=gate)
