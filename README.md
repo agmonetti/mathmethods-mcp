@@ -42,14 +42,40 @@ Every client config below also works with
 
 ## Tools
 
-### Root finding, integration, ODE and interpolation
+### Root finding
 
-| Tool                  | What it does                                          | Math method      |
-| --------------------- | ----------------------------------------------------- | ---------------- |
-| `root_bisection`      | Find a root of `f(x) = 0` in `[a, b]`                 | Bisection        |
-| `integral_simpson13`  | Approximate `∫ₐᵇ f(x) dx` with composite Simpson 1/3  | Newton–Cotes     |
-| `ode_rk4`             | Solve `y' = f(x, y)`, `y(x0) = y0` up to `xf`         | Runge–Kutta 4    |
-| `interpolation_lagrange` | Build the Lagrange polynomial through given points  | Lagrange         |
+| Tool                    | What it does                                        |
+| ----------------------- | --------------------------------------------------- |
+| `root_bisection`        | Bisection on `[a, b]` (requires a sign change)      |
+| `root_newton_raphson`   | Newton–Raphson with numeric derivative              |
+| `root_punto_fijo`       | Fixed-point iteration `x = g(x)`                    |
+| `root_aitken`           | Aitken Δ² acceleration of fixed point               |
+| `root_comparar`         | All four methods compared on the same problem       |
+
+### Numerical integration
+
+| Tool                    | What it does                                        |
+| ----------------------- | --------------------------------------------------- |
+| `integral_rectangulo`   | Composite midpoint rule                             |
+| `integral_trapecio`     | Composite trapezoidal rule                          |
+| `integral_simpson13`    | Composite Simpson 1/3 (n even)                      |
+| `integral_simpson38`    | Composite Simpson 3/8 (n multiple of 3)             |
+| `integral_comparar`     | All four rules compared on the same integral        |
+
+### Differentiation
+
+| Tool                    | What it does                                        |
+| ----------------------- | --------------------------------------------------- |
+| `finite_differences`    | Forward/backward/central 1st & 2nd derivatives      |
+
+### ODE and interpolation
+
+| Tool                      | What it does                                            |
+| ------------------------- | ------------------------------------------------------- |
+| `ode_rk4`                 | Runge–Kutta 4 (4th order)                               |
+| `ode_heun`                | Heun predictor–corrector (2nd order)                    |
+| `ode_euler`               | Explicit Euler (1st order)                              |
+| `interpolation_lagrange`  | Lagrange interpolating polynomial                       |
 
 ### Monte Carlo
 
@@ -60,6 +86,7 @@ Every client config below also works with
 | `mc_valor_promedio_2d`  | Mean-value estimate of a double integral                |
 | `mc_valor_promedio_3d`  | Mean-value estimate of a triple integral                |
 | `mc_estadistico_1d`     | M×N replicated experiment with statistical analysis     |
+| `mc_convergencia_1d`    | Running average showing the estimate converging         |
 
 ### Dynamic systems
 
@@ -90,10 +117,11 @@ modelo-mat-mcp/
 │   └── core/                 # vendored math core (from modeladoYsimulacion-web)
 │       ├── root_finding.py   ├── integration.py
 │       ├── ode.py            ├── interpolation.py
-│       ├── monte_carlo.py    ├── dynamic_1d.py
-│       ├── dynamic_2d_linear.py ├── dynamic_2d_non_homogeneous.py
-│       ├── dynamic_2d_nonlinear.py ├── dynamic_2d_conservative.py
-│       └── dynamic_2d_lanchester.py └── utils.py
+│       ├── differentiation.py├── monte_carlo.py
+│       ├── dynamic_1d.py     ├── dynamic_2d_linear.py
+│       ├── dynamic_2d_non_homogeneous.py ├── dynamic_2d_nonlinear.py
+│       ├── dynamic_2d_conservative.py ├── dynamic_2d_lanchester.py
+│       └── utils.py
 ├── tests/                    # test_tools.py + test_dynamic_tools.py
 ├── mcp.example.json          # server registration template (copy to .vscode/mcp.json)
 ├── requirements.txt
