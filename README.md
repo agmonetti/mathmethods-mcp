@@ -4,6 +4,7 @@
 [![License](https://img.shields.io/github/license/agmonetti/mathmethods-mcp)](LICENSE)
 [![CI](https://github.com/agmonetti/mathmethods-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/agmonetti/mathmethods-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/mathmethods-mcp)](https://pypi.org/project/mathmethods-mcp/)
+[![M8ven Live Monitored](https://m8ven.ai/badge/mcp/agmonetti-mathmethods-mcp-1l7999)](https://m8ven.ai/mcp/agmonetti-mathmethods-mcp-1l7999)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that exposes a
 numerical-methods core as tools an LLM agent can call directly from a chat
