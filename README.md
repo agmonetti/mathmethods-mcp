@@ -4,6 +4,7 @@
 [![License](https://img.shields.io/github/license/agmonetti/mathmethods-mcp)](LICENSE)
 [![CI](https://github.com/agmonetti/mathmethods-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/agmonetti/mathmethods-mcp/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/mathmethods-mcp)](https://pypi.org/project/mathmethods-mcp/)
+[![Smithery](https://smithery.ai/badge/@agmonetti/mathmethods-mcp)](https://smithery.ai/server/@agmonetti/mathmethods-mcp)
 [![M8ven Live Monitored](https://m8ven.ai/badge/mcp/agmonetti-mathmethods-mcp-1l7999)](https://m8ven.ai/mcp/agmonetti-mathmethods-mcp-1l7999)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that exposes a
@@ -23,7 +24,13 @@ Any MCP client registers the server with the same one-liner command —
 `uvx mathmethods-mcp` (a Python package that needs no cloning, venv or paths):
 
 ```json
-{ "command": "uvx", "args": ["mathmethods"] }
+{ "command": "uvx", "args": ["mathmethods-mcp"] }
+```
+
+Or install with 1-click via Smithery:
+
+```bash
+npx -y @smithery/cli install mathmethods-mcp --client claude
 ```
 
 <details>

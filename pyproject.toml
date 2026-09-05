@@ -9,6 +9,20 @@ description = "MCP server exposing numerical-methods tools: bisection, Simpson 1
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "numerical-methods",
+    "mathematics",
+    "calculus",
+    "scientific-computing",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "mcp[cli]==1.14.1",
     "numpy>=1.26.0",
