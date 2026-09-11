@@ -3,6 +3,7 @@
 [![MCP Server](https://badge.mcpx.dev?type=server)](https://modelcontextprotocol.io/introduction)
 [![License](https://img.shields.io/github/license/agmonetti/mathmethods-mcp)](LICENSE)
 [![CI](https://github.com/agmonetti/mathmethods-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/agmonetti/mathmethods-mcp/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@agmonetti/mathmethods-mcp)](https://www.npmjs.com/package/@agmonetti/mathmethods-mcp)
 [![PyPI](https://img.shields.io/pypi/v/mathmethods-mcp)](https://pypi.org/project/mathmethods-mcp/)
 [![M8ven Live Monitored](https://m8ven.ai/badge/mcp/agmonetti-mathmethods-mcp-1l7999)](https://m8ven.ai/mcp/agmonetti-mathmethods-mcp-1l7999)
 
@@ -13,17 +14,70 @@ numerical-methods engine of the academic project `modeladoYsimulacion-web`
 (UADE); the math core is **vendored** into this repository so the server is
 fully self-contained.
 
-## Quick start
+## Installation and Usage
+
+### 1. Run with NPX (Recommended)
+
+Runs on-demand without any global installation:
+
+#### Claude Code (One-liner CLI)
+```bash
+claude mcp add mathmethods npx -y @agmonetti/mathmethods-mcp
+```
+
+#### Claude Desktop & Cursor (JSON Configuration)
+Add to your `claude_desktop_config.json` or `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "mathmethods": {
+      "command": "npx",
+      "args": ["-y", "@agmonetti/mathmethods-mcp"]
+    }
+  }
+}
+```
+
+---
+
+### 2. Install Globally from NPM
+
+Ideal for instant startup without network latency on every invocation:
+
+```bash
+npm install -g @agmonetti/mathmethods-mcp
+```
+
+```json
+{
+  "mcpServers": {
+    "mathmethods": {
+      "command": "mathmethods-mcp"
+    }
+  }
+}
+```
+
+---
+
+### 3. Run with UVX (Direct Python)
+
+Any MCP client can also run the Python package directly with Astral's `uvx`:
 
 ```bash
 claude mcp add mathmethods-mcp -- uvx mathmethods-mcp
 ```
 
-Any MCP client registers the server with the same one-liner command —
-`uvx mathmethods-mcp` (a Python package that needs no cloning, venv or paths):
-
 ```json
-{ "command": "uvx", "args": ["mathmethods-mcp"] }
+{
+  "mcpServers": {
+    "mathmethods": {
+      "command": "uvx",
+      "args": ["mathmethods-mcp"]
+    }
+  }
+}
 ```
 
 <details>
@@ -31,14 +85,14 @@ Any MCP client registers the server with the same one-liner command —
 
 ```bash
 git clone https://github.com/agmonetti/mathmethods-mcp.git
-cd mathmethods
+cd mathmethods-mcp
 uv sync --extra dev
-uv run mathmethods
+uv run server.py
 ```
 
-Every client config below also works with
+Every client config above also works with
 `uv run --frozen --project <checkout> python <checkout>/server.py` in place of
-`uvx mathmethods-mcp`.
+`npx -y @agmonetti/mathmethods-mcp` or `uvx mathmethods-mcp`.
 </details>
 
 ## Tools
@@ -110,7 +164,7 @@ Unicode symbols `α β γ ε μ δ`.
 ## Project layout
 
 ```
-modelo-mat-mcp/
+mathmethods-mcp/
 ├── server.py                 # FastMCP app + all tools
 ├── mathmethods/
 │   ├── compiler.py           # hardened expression validation (whitelist, caps)
@@ -132,7 +186,7 @@ modelo-mat-mcp/
 ## Install
 
 ```bash
-cd modelo-mat-mcp
+cd mathmethods-mcp
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -181,12 +235,12 @@ Create `.vscode/mcp.json` (git-ignored) — or copy `mcp.example.json`:
 ```json
 {
   "servers": {
-    "modelo-mat-stdio": {
+    "mathmethods-stdio": {
       "type": "stdio",
-      "command": "uvx",
-      "args": ["mathmethods"]
+      "command": "npx",
+      "args": ["-y", "@agmonetti/mathmethods-mcp"]
     },
-    "modelo-mat-http": {
+    "mathmethods-http": {
       "type": "http",
       "url": "http://127.0.0.1:8000/mcp"
     }
@@ -208,9 +262,9 @@ Add the entry under `context_servers` (note: **not** `mcp_servers`) in
 ```json
 {
   "context_servers": {
-    "modelo-mat": {
-      "command": "uvx",
-      "args": ["mathmethods"]
+    "mathmethods": {
+      "command": "npx",
+      "args": ["-y", "@agmonetti/mathmethods-mcp"]
     }
   }
 }
@@ -230,9 +284,9 @@ global `~/.config/opencode/opencode.jsonc`:
 ```json
 {
   "mcp": {
-    "modelo-mat": {
+    "mathmethods": {
       "type": "local",
-      "command": ["uvx", "mathmethods"],
+      "command": ["npx", "-y", "@agmonetti/mathmethods-mcp"],
       "enabled": true
     }
   }
@@ -242,7 +296,7 @@ global `~/.config/opencode/opencode.jsonc`:
 Or register it with the CLI (equivalent):
 
 ```bash
-opencode mcp add modelo-mat -- uvx mathmethods-mcp
+opencode mcp add mathmethods -- npx -y @agmonetti/mathmethods-mcp
 ```
 
 For a remote server running on `http://127.0.0.1:8000/mcp`:
@@ -250,7 +304,7 @@ For a remote server running on `http://127.0.0.1:8000/mcp`:
 ```json
 {
   "mcp": {
-    "modelo-mat": {
+    "mathmethods": {
       "type": "remote",
       "url": "http://127.0.0.1:8000/mcp",
       "enabled": true
@@ -272,9 +326,9 @@ Add the entry under `mcpServers` in the Antigravity config file, typically
 ```json
 {
   "mcpServers": {
-    "modelo-mat": {
-      "command": "uvx",
-      "args": ["mathmethods"]
+    "mathmethods": {
+      "command": "npx",
+      "args": ["-y", "@agmonetti/mathmethods-mcp"]
     }
   }
 }
@@ -298,9 +352,9 @@ then inside the session:
 
 ```text
 /mcp add
-  Server name:  modelo-mat
+  Server name:  mathmethods
   Server type:  1 (Local/STDIO)
-  Command:      uvx mathmethods-mcp
+  Command:      npx -y @agmonetti/mathmethods-mcp
 ```
 
 Press `Ctrl+S` to save. The settings are stored in
@@ -316,15 +370,15 @@ Both use the `mcpServers` format. In Claude Desktop, edit
 `claude_desktop_config.json`; in Claude Code:
 
 ```bash
-claude mcp add mathmethods-mcp -- uvx mathmethods-mcp
+claude mcp add mathmethods npx -y @agmonetti/mathmethods-mcp
 ```
 
 ```json
 {
   "mcpServers": {
-    "modelo-mat": {
-      "command": "uvx",
-      "args": ["mathmethods"]
+    "mathmethods": {
+      "command": "npx",
+      "args": ["-y", "@agmonetti/mathmethods-mcp"]
     }
   }
 }

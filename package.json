@@ -1,0 +1,45 @@
+{
+  "name": "@agmonetti/mathmethods-mcp",
+  "version": "0.1.0",
+  "description": "MCP server exposing numerical methods tools: root finding, integration, ODEs, interpolation, Monte Carlo, and dynamical systems.",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "numerical-methods",
+    "mathematics",
+    "calculus",
+    "scientific-computing",
+    "claude",
+    "cursor",
+    "windsurf"
+  ],
+  "homepage": "https://github.com/agmonetti/mathmethods-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/agmonetti/mathmethods-mcp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agmonetti/mathmethods-mcp.git"
+  },
+  "license": "MIT",
+  "author": "Agustin Monetti <agus.monetti01@gmail.com>",
+  "main": "bin/index.js",
+  "bin": {
+    "mathmethods-mcp": "./bin/index.js"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node bin/index.js"
+  }
+}

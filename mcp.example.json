@@ -1,11 +1,11 @@
 {
   "servers": {
-    "modelo-mat-stdio": {
+    "mathmethods-stdio": {
       "type": "stdio",
-      "command": "uvx",
-      "args": ["mathmethods-mcp"]
+      "command": "npx",
+      "args": ["-y", "@agmonetti/mathmethods-mcp"]
     },
-    "modelo-mat-http": {
+    "mathmethods-http": {
       "type": "http",
       "url": "http://127.0.0.1:8000/mcp"
     }
