@@ -6,6 +6,7 @@
 [![npm version](https://img.shields.io/npm/v/@agmonetti/mathmethods-mcp)](https://www.npmjs.com/package/@agmonetti/mathmethods-mcp)
 [![PyPI](https://img.shields.io/pypi/v/mathmethods-mcp)](https://pypi.org/project/mathmethods-mcp/)
 [![M8ven Live Monitored](https://m8ven.ai/badge/mcp/agmonetti-mathmethods-mcp-1l7999)](https://m8ven.ai/mcp/agmonetti-mathmethods-mcp-1l7999)
+[![Mathmethods Mcp on AI Agents Listing](https://aiagentslisting.com/mathmethods-mcp/badge.svg?claim=ca81a89d96e8b011f557e77f0d8b7717)](https://aiagentslisting.com/mcp/mathmethods-mcp)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that exposes a
 numerical-methods core as tools an LLM agent can call directly from a chat
