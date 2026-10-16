@@ -7,6 +7,8 @@ on:
 
 jobs:
   test:
+    # Default install (no `viz`): exercises the registry and the missing
+    # matplotlib error path; rendering tests are skipped.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,4 +28,21 @@ jobs:
         run: uv run ruff check .
 
       - name: Tests
+        run: uv run pytest -q
+
+  viz:
+    # With the optional `viz` extra: runs the full plotting suite.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Install dependencies (with viz)
+        run: uv sync --extra dev --extra viz --frozen
+
+      - name: Tests (plots enabled)
         run: uv run pytest -q

@@ -162,6 +162,30 @@ Math expressions use Python/SymPy syntax: `x**2`, `sin(x)`, `exp(x)`,
 and the caret `^` for powers. The Greek combat parameters of Lanchester use the
 Unicode symbols `α β γ ε μ δ`.
 
+## Plots (optional)
+
+Every tool accepts a `plot=False | True` flag. With `plot=True` the response
+contains the usual JSON **plus** a rendered PNG (an MCP image content block):
+phase portraits, solution curves, bifurcation diagrams, Monte Carlo
+convergence, and so on.
+
+```text
+"Solve y' = y, y(0)=1 on [0,1] with RK4 and show me the plot."
+```
+
+Plotting needs the optional `viz` extra (Matplotlib), which is **not** part of
+the default install so the stdio server startup stays light:
+
+```bash
+pip install "mathmethods-mcp[viz]"    # pip
+uvx --from "mathmethods-mcp[viz]" mathmethods-mcp   # uv
+uv sync --extra viz                   # from a checkout
+```
+
+If `plot=True` is used without the extra, the tool returns a clear error telling
+you how to install it. Clients that do not render images still receive the JSON
+result alongside the image, so nothing is lost.
+
 ## Project layout
 
 ```
@@ -169,6 +193,7 @@ mathmethods-mcp/
 ├── server.py                 # FastMCP app + all tools
 ├── mathmethods/
 │   ├── compiler.py           # hardened expression validation (whitelist, caps)
+│   ├── plots.py              # optional PNG rendering (plot=True), lazy matplotlib
 │   ├── server.py             # FastMCP app and tool definitions
 │   └── core/                 # vendored math core (from modeladoYsimulacion-web)
 │       ├── root_finding.py   ├── integration.py
@@ -178,7 +203,7 @@ mathmethods-mcp/
 │       ├── dynamic_2d_non_homogeneous.py ├── dynamic_2d_nonlinear.py
 │       ├── dynamic_2d_conservative.py ├── dynamic_2d_lanchester.py
 │       └── utils.py
-├── tests/                    # test_tools.py + test_dynamic_tools.py
+├── tests/                    # test_tools.py + test_dynamic_tools.py + test_plots.py
 ├── mcp.example.json          # server registration template (copy to .vscode/mcp.json)
 ├── requirements.txt
 └── pyproject.toml

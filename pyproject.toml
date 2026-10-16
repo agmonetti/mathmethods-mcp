@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mathmethods-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "MCP server exposing numerical-methods tools: bisection, Simpson 1/3, Runge-Kutta 4, Lagrange interpolation"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,6 +32,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0.0", "ruff>=0.8.0"]
+# Optional visual output (tools' `plot=True`). Kept out of the default install
+# so the stdio server startup stays light when charts are not needed.
+viz = ["matplotlib>=3.8"]
 
 [project.urls]
 Repository = "https://github.com/agmonetti/mathmethods-mcp"

@@ -12,9 +12,9 @@ import re
 from collections.abc import Callable
 
 import numpy as np
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Image
 
-from mathmethods import compiler
+from mathmethods import compiler, plots
 from mathmethods.core import (
     differentiation,
     dynamic_1d,
@@ -116,7 +116,7 @@ def _finalize(result, *, downsample_keys: tuple[str, ...] = ()) -> dict:
 def _trim_large_arrays(value) -> object:
     """Recursively downsample long numeric lists to keep responses bounded."""
     if isinstance(value, list):
-        if value and all(isinstance(v, (int, float)) for v in value):
+        if value and all(isinstance(v, (int, float)) or v is None for v in value):
             return _downsample(value)
         return [_trim_large_arrays(v) for v in value]
     if isinstance(value, dict):
@@ -126,6 +126,21 @@ def _trim_large_arrays(value) -> object:
 
 def _finalize_deep(result) -> dict:
     return _trim_large_arrays(_json_safe(result))
+
+
+def _maybe_plot(name: str, result: dict, plot: bool, args: dict | None = None) -> object:
+    """Return ``result`` unchanged, or ``[result, Image]`` when ``plot=True``.
+
+    FastMCP serializes the dict to JSON (exactly as when ``plot=False``) and
+    attaches the PNG as ``ImageContent``. The tools that expose this option are
+    registered with ``structured_output=False`` on purpose: with a structured
+    output schema FastMCP would try to validate/serialize the ``Image`` and
+    fail.
+    """
+    if not plot:
+        return result
+    png = plots.render(name, result, args or {})
+    return [result, Image(data=png, format="png")]
 
 
 # --------------------------------------------------------------------------
@@ -143,12 +158,14 @@ mcp = FastMCP(
         "integration (Simpson 1/3), ordinary differential equations "
         "(Runge-Kutta 4) and Lagrange interpolation. Math expressions use "
         "Python/SymPy syntax: x**2, sin(x), exp(x), sqrt(x), log(x). "
-        "Also accepted: e^x, sen(x) and the caret (^) for powers."
+        "Also accepted: e^x, sen(x) and the caret (^) for powers. "
+        "Most tools accept plot=True to also return a PNG chart (requires "
+        "the optional 'viz' extra)."
     ),
 )
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def root_bisection(
     func_str: str,
     a: float,
@@ -156,6 +173,7 @@ def root_bisection(
     tol: float = 1e-6,
     max_iter: int = 100,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Find a root of f(x) = 0 in [a, b] using the bisection method.
 
@@ -168,9 +186,11 @@ def root_bisection(
         tol: Convergence tolerance on the residual/error.
         max_iter: Maximum number of iterations.
         precision: Rounding digits for the reported root.
+        plot: When True, also return a PNG plot of f(x) and the root.
 
     Returns:
         Dict with the root, convergence flag, iteration table and errors.
+        With ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     a = _clean_float(a, "a")
     b = _clean_float(b, "b")
@@ -184,10 +204,10 @@ def root_bisection(
     result = root_finding.RootFindingService.biseccion(
         func, a, b, tol=tol, max_iter=max_iter, precision=precision
     )
-    return _finalize(result)
+    return _maybe_plot("root_bisection", _finalize(result), plot, {"func_str": func_str, "a": a, "b": b})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def integral_simpson13(
     func_str: str,
     a: float,
@@ -195,6 +215,7 @@ def integral_simpson13(
     n: int,
     epsilon: float | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Approximate the definite integral of f(x) on [a, b] with composite Simpson 1/3.
 
@@ -205,9 +226,11 @@ def integral_simpson13(
         n: Number of subintervals (must be even). Error is O(h^4).
         epsilon: Point in [a, b] used to report the truncation error bound.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of f(x) over [a, b].
 
     Returns:
         Dict with the approximated integral, error estimates and table.
+        With ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     a = _clean_float(a, "a")
     b = _clean_float(b, "b")
@@ -223,10 +246,10 @@ def integral_simpson13(
     result = integration.IntegrationService.simpson_13_compuesto(
         func, a, b, n=n, precision=precision, epsilon=epsilon
     )
-    return _finalize(result)
+    return _maybe_plot("integral_simpson13", _finalize(result), plot, {"func_str": func_str, "a": a, "b": b})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def ode_rk4(
     ecuacion_str: str,
     x0: float,
@@ -235,6 +258,7 @@ def ode_rk4(
     h: float,
     tol: float | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Solve an initial value problem y'(x) = f(x, y) with the Runge-Kutta 4 method.
 
@@ -246,21 +270,24 @@ def ode_rk4(
         h: Step size (must be positive). The endpoint xf is always reached.
         tol: Optional tolerance to flag whether the final error meets it.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of the solution.
 
     Returns:
         Dict with the numerical solution table, exact solution (when SymPy can
-        solve it) and per-step errors.
+        solve it) and per-step errors. With ``plot=True`` a list
+        ``[dict, Image]`` is returned instead.
     """
-    return _ode_solve("rk4", ecuacion_str, x0, y0, xf, h, tol, precision)
+    return _ode_solve("rk4", ecuacion_str, x0, y0, xf, h, tol, precision, plot=plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def interpolation_lagrange(
     puntos_x: list[float],
     x_eval: float | None = None,
     func_str: str | None = None,
     puntos_y: list[float] | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Build the Lagrange interpolating polynomial through a set of points.
 
@@ -273,10 +300,12 @@ def interpolation_lagrange(
         func_str: Optional generating function f(x) for the y values.
         puntos_y: Optional y values matching ``puntos_x`` one-to-one.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of the polynomial and points.
 
     Returns:
         Dict with the polynomial, its degree, the points table and error
-        bounds when ``func_str`` is provided.
+        bounds when ``func_str`` is provided. With ``plot=True`` a list
+        ``[dict, Image]`` is returned instead.
     """
     precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
     _require(
@@ -316,7 +345,7 @@ def interpolation_lagrange(
         puntos_y=puntos_y,
         precision=precision,
     )
-    return _finalize(result)
+    return _maybe_plot("interpolation_lagrange", _finalize(result), plot)
 
 
 # --------------------------------------------------------------------------
@@ -333,7 +362,7 @@ MAX_BIF_STEPS = 500
 # --------------------------------------------------------------------------
 # Monte Carlo tools
 # --------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def mc_hit_or_miss_1d(
     func_str: str,
     a: float,
@@ -342,6 +371,7 @@ def mc_hit_or_miss_1d(
     seed: int | None = None,
     precision: int = 8,
     nivel_confianza: float = 0.95,
+    plot: bool = False,
 ) -> dict:
     """Estimate ∫ₐᵇ f(x) dx with the hit-or-miss Monte Carlo method.
 
@@ -354,9 +384,11 @@ def mc_hit_or_miss_1d(
         seed: Optional RNG seed for reproducibility.
         precision: Rounding digits.
         nivel_confianza: Confidence level in (0, 1) for the interval.
+        plot: When True, also return a PNG plot of the samples and f(x).
 
     Returns:
         Dict with the estimate, interval, sample statistics and history.
+        With ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     a = _clean_float(a, "a")
     b = _clean_float(b, "b")
@@ -374,10 +406,10 @@ def mc_hit_or_miss_1d(
         func, a, b, N=N, seed=seed, precision=precision, nivel_confianza=nivel_confianza
     )
     result["historial"] = _downsample(result.get("historial") or [], 100)
-    return _finalize_deep(result)
+    return _maybe_plot("mc_hit_or_miss_1d", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def mc_valor_promedio_1d(
     func_str: str,
     a: float,
@@ -386,6 +418,7 @@ def mc_valor_promedio_1d(
     seed: int | None = None,
     precision: int = 8,
     nivel_confianza: float = 0.95,
+    plot: bool = False,
 ) -> dict:
     """Estimate ∫ₐᵇ f(x) dx with the mean-value Monte Carlo method.
 
@@ -396,9 +429,11 @@ def mc_valor_promedio_1d(
         seed: Optional RNG seed for reproducibility.
         precision: Rounding digits.
         nivel_confianza: Confidence level in (0, 1).
+        plot: When True, also return a PNG scatter plot of the samples.
 
     Returns:
         Dict with the estimate, confidence interval and sample statistics.
+        With ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     a = _clean_float(a, "a")
     b = _clean_float(b, "b")
@@ -415,10 +450,10 @@ def mc_valor_promedio_1d(
     result = monte_carlo.MonteCarloService.valor_promedio_1d(
         func, a, b, N=N, seed=seed, precision=precision, nivel_confianza=nivel_confianza
     )
-    return _finalize_deep(result)
+    return _maybe_plot("mc_valor_promedio_1d", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def mc_valor_promedio_2d(
     func_str: str,
     x_a: float,
@@ -429,8 +464,13 @@ def mc_valor_promedio_2d(
     seed: int | None = None,
     precision: int = 8,
     nivel_confianza: float = 0.95,
+    plot: bool = False,
 ) -> dict:
-    """Estimate the double integral of f(x, y) over [x_a,x_b]×[y_a,y_b] by mean value."""
+    """Estimate the double integral of f(x, y) over [x_a,x_b]×[y_a,y_b] by mean value.
+
+    With ``plot=True`` a PNG scatter of the sampled points coloured by f(x, y)
+    is returned as ``[dict, Image]`` alongside the numeric result.
+    """
     x_a, x_b = _clean_float(x_a, "x_a"), _clean_float(x_b, "x_b")
     y_a, y_b = _clean_float(y_a, "y_a"), _clean_float(y_b, "y_b")
     N = _clean_int(N, "N", minimum=1, maximum=MAX_MC_N)
@@ -446,10 +486,10 @@ def mc_valor_promedio_2d(
     result = monte_carlo.MonteCarloService.valor_promedio_2d(
         func, (x_a, x_b), (y_a, y_b), N=N, seed=seed, precision=precision, nivel_confianza=nivel_confianza
     )
-    return _finalize_deep(result)
+    return _maybe_plot("mc_valor_promedio_2d", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def mc_valor_promedio_3d(
     func_str: str,
     x_a: float,
@@ -462,8 +502,13 @@ def mc_valor_promedio_3d(
     seed: int | None = None,
     precision: int = 8,
     nivel_confianza: float = 0.95,
+    plot: bool = False,
 ) -> dict:
-    """Estimate the triple integral of f(x,y,z) over the box [x_a,x_b]×[y_a,y_b]×[z_a,z_b]."""
+    """Estimate the triple integral of f(x,y,z) over the box [x_a,x_b]×[y_a,y_b]×[z_a,z_b].
+
+    With ``plot=True`` a PNG histogram of the sampled f values is returned as
+    ``[dict, Image]`` alongside the numeric result.
+    """
     x_a, x_b = _clean_float(x_a, "x_a"), _clean_float(x_b, "x_b")
     y_a, y_b = _clean_float(y_a, "y_a"), _clean_float(y_b, "y_b")
     z_a, z_b = _clean_float(z_a, "z_a"), _clean_float(z_b, "z_b")
@@ -487,10 +532,10 @@ def mc_valor_promedio_3d(
         precision=precision,
         nivel_confianza=nivel_confianza,
     )
-    return _finalize_deep(result)
+    return _maybe_plot("mc_valor_promedio_3d", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def mc_estadistico_1d(
     func_str: str,
     a: float,
@@ -500,6 +545,7 @@ def mc_estadistico_1d(
     nivel_confianza: float = 0.95,
     seed: int | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Replicated Monte Carlo experiment (M repetitions of N samples) with statistical analysis.
 
@@ -511,9 +557,11 @@ def mc_estadistico_1d(
         nivel_confianza: Confidence level in (0, 1).
         seed: Optional RNG seed.
         precision: Rounding digits.
+        plot: When True, also return a PNG histogram of the estimates.
 
     Returns:
         Dict with the distribution of estimates and confidence intervals.
+        With ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     a = _clean_float(a, "a")
     b = _clean_float(b, "b")
@@ -531,13 +579,13 @@ def mc_estadistico_1d(
     result = monte_carlo.MonteCarloService.analisis_estadistico_1d(
         func, a, b, N=N, M=M, nivel_confianza=nivel_confianza, seed=seed, precision=precision
     )
-    return _finalize_deep(result)
+    return _maybe_plot("mc_estadistico_1d", _finalize_deep(result), plot)
 
 
 # --------------------------------------------------------------------------
 # Dynamic 1D tools
 # --------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def dynamic_1d_solve(
     func_str: str = "x",
     model: str = "custom",
@@ -549,6 +597,7 @@ def dynamic_1d_solve(
     n_time: int = 200,
     initial_conditions: list[float] | None = None,
     control_enabled: bool = False,
+    plot: bool = False,
 ) -> dict:
     """Analyze the 1D autonomous system x' = f(x): equilibria, stability, phase portrait and time series.
 
@@ -562,9 +611,11 @@ def dynamic_1d_solve(
         n_time: number of time steps.
         initial_conditions: starting states, e.g. [0.1, 1.0].
         control_enabled: add a constant control term -h (verhulst/custom only).
+        plot: When True, also return a PNG of f(x) and the time series.
 
     Returns:
-        Dict with equilibria, their stability, the phase portrait data and time solutions.
+        Dict with equilibria, their stability, the phase portrait data and time
+        solutions. With ``plot=True`` a list ``[dict, Image]`` is returned.
     """
     params = params or {}
     x_min = _clean_float(x_min, "x_min")
@@ -594,10 +645,10 @@ def dynamic_1d_solve(
         "initial_conditions": initial_conditions,
     }
     result = dynamic_1d.Dynamic1DService.solve(payload)
-    return _finalize_deep(result)
+    return _maybe_plot("dynamic_1d_solve", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def dynamic_1d_equilibria(
     func_str: str = "x",
     model: str = "custom",
@@ -606,8 +657,13 @@ def dynamic_1d_equilibria(
     x_max: float = 3.0,
     n_phase: int = 400,
     control_enabled: bool = False,
+    plot: bool = False,
 ) -> dict:
-    """Find the equilibria of x' = f(x) and classify their stability."""
+    """Find the equilibria of x' = f(x) and classify their stability.
+
+    With ``plot=True`` a PNG of f(x) with the equilibria and the time series is
+    returned as ``[dict, Image]`` alongside the numeric result.
+    """
     params = params or {}
     x_min = _clean_float(x_min, "x_min")
     x_max = _clean_float(x_max, "x_max")
@@ -629,10 +685,10 @@ def dynamic_1d_equilibria(
         "n_phase": n_phase,
     }
     result = dynamic_1d.Dynamic1DService.solve(payload)
-    return _finalize_deep(result)
+    return _maybe_plot("dynamic_1d_equilibria", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def dynamic_1d_bifurcation(
     func_str: str = "x",
     model: str = "custom",
@@ -646,6 +702,7 @@ def dynamic_1d_bifurcation(
     n_phase: int = 400,
     phase_params: list[float] | None = None,
     control_enabled: bool = False,
+    plot: bool = False,
 ) -> dict:
     """Bifurcation analysis of x' = f(x; bif_param): equilibria vs parameter sweep.
 
@@ -658,9 +715,11 @@ def dynamic_1d_bifurcation(
         x_min, x_max, n_phase: state window for finding equilibria.
         phase_params: optional explicit parameter values for phase slices.
         control_enabled: add a constant control term -h (verhulst/custom only).
+        plot: When True, also return a PNG of the bifurcation diagram.
 
     Returns:
-        Dict with the equilibria-vs-parameter table, exact symbolic analysis and phase slices.
+        Dict with the equilibria-vs-parameter table, exact symbolic analysis and
+        phase slices. With ``plot=True`` a list ``[dict, Image]`` is returned.
     """
     params = params or {}
     bif_min = _clean_float(bif_min, "bif_min")
@@ -701,7 +760,7 @@ def dynamic_1d_bifurcation(
     bif = result.get("bifurcation")
     if isinstance(bif, dict):
         bif["equilibria"] = _downsample(bif.get("equilibria") or [], 300)
-    return result
+    return _maybe_plot("dynamic_1d_bifurcation", result, plot)
 
 
 # --------------------------------------------------------------------------
@@ -725,7 +784,7 @@ def _clean_dynamic2d_inputs(x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, tr
     return x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, traj
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def dynamic_2d_linear_solve(
     a: float = 3.0,
     b: float = 1.0,
@@ -743,6 +802,7 @@ def dynamic_2d_linear_solve(
     y_min: float = -5.0,
     y_max: float = 5.0,
     cantidad_trayectorias: int = 16,
+    plot: bool = False,
 ) -> dict:
     """Solve and classify the linear 2D system X' = A·X + B with constant matrix A.
 
@@ -752,9 +812,11 @@ def dynamic_2d_linear_solve(
         x0, y0, t0, t_fin, h: initial condition and integration grid.
         x_min..y_max: window for the phase portrait.
         cantidad_trayectorias: number of sample trajectories.
+        plot: When True, also return a PNG phase portrait.
 
     Returns:
-        Dict with the classification, eigenvalues, nullclines, analytic solution and trajectories.
+        Dict with the classification, eigenvalues, nullclines, analytic solution
+        and trajectories. With ``plot=True`` a list ``[dict, Image]`` is returned.
     """
     x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, traj = _clean_dynamic2d_inputs(
         x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, cantidad_trayectorias
@@ -766,10 +828,10 @@ def dynamic_2d_linear_solve(
         "cantidad_trayectorias": traj,
     }
     result = dynamic_2d_linear.Dynamic2DLinearService.solve(payload)
-    return _finalize_deep(result)
+    return _maybe_plot("dynamic_2d_linear_solve", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def dynamic_2d_nonlinear_solve(
     eq_x: str = "y - x",
     eq_y: str = "x**2 - 1",
@@ -785,6 +847,7 @@ def dynamic_2d_nonlinear_solve(
     y_min: float = -3.0,
     y_max: float = 3.0,
     cantidad_trayectorias: int = 25,
+    plot: bool = False,
 ) -> dict:
     """Solve and analyze the nonlinear 2D system x' = f(x,y), y' = g(x,y).
 
@@ -793,9 +856,11 @@ def dynamic_2d_nonlinear_solve(
         params: extra parameter values (e.g. {'alpha': 0.5}).
         mu: bifurcation parameter value.
         x0..y_max, cantidad_trayectorias: integration and portrait settings.
+        plot: When True, also return a PNG phase portrait.
 
     Returns:
-        Dict with equilibria, Jacobian-based classification, nullclines and trajectories.
+        Dict with equilibria, Jacobian-based classification, nullclines and
+        trajectories. With ``plot=True`` a list ``[dict, Image]`` is returned.
     """
     params = params or {}
     x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, traj = _clean_dynamic2d_inputs(
@@ -811,10 +876,10 @@ def dynamic_2d_nonlinear_solve(
         "cantidad_trayectorias": traj,
     }
     result = dynamic_2d_nonlinear.Dynamic2DNonLinearService.solve(payload)
-    return _finalize_deep(result)
+    return _maybe_plot("dynamic_2d_nonlinear_solve", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def dynamic_2d_conservative_solve(
     eq_x: str = "y",
     eq_y: str = "x - x**3",
@@ -829,6 +894,7 @@ def dynamic_2d_conservative_solve(
     y_min: float = -2.5,
     y_max: float = 2.5,
     cantidad_trayectorias: int = 25,
+    plot: bool = False,
 ) -> dict:
     """Analyze a 2D system checking conservativeness (divergence-free), Hamiltonian/energy and closed orbits.
 
@@ -836,10 +902,12 @@ def dynamic_2d_conservative_solve(
         eq_x, eq_y: Math expressions for x' and y'.
         mu: parameter value.
         x0..y_max, cantidad_trayectorias: integration and portrait settings.
+        plot: When True, also return a PNG phase portrait.
 
     Returns:
         Dict with the divergence check, the Hamiltonian reconstruction, the
-        equilibrium classification and the trajectories.
+        equilibrium classification and the trajectories. With ``plot=True`` a
+        list ``[dict, Image]`` is returned instead.
     """
     x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, traj = _clean_dynamic2d_inputs(
         x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, cantidad_trayectorias
@@ -853,10 +921,10 @@ def dynamic_2d_conservative_solve(
         "cantidad_trayectorias": traj,
     }
     result = dynamic_2d_conservative.Dynamic2DConservativeService.solve(payload)
-    return _finalize_deep(result)
+    return _maybe_plot("dynamic_2d_conservative_solve", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def dynamic_2d_lanchester_solve(
     eq_x: str = "-α * y",
     eq_y: str = "-β * x",
@@ -871,6 +939,7 @@ def dynamic_2d_lanchester_solve(
     t0: float = 0.0,
     t_fin: float = 5.0,
     h: float = 0.01,
+    plot: bool = False,
 ) -> dict:
     """Simulate a Lanchester combat model x' = f(x,y), y' = g(x,y) with analytic time-to-annihilation.
 
@@ -879,9 +948,12 @@ def dynamic_2d_lanchester_solve(
         alpha, beta, gamma, epsilon, mu, delta: Greek parameter values.
         x0, y0: initial force sizes.
         t0, t_fin, h: simulation grid.
+        plot: When True, also return a PNG phase portrait of the battle.
 
     Returns:
-        Dict with the analytic winner/survivors, state equation and the numerical trajectories.
+        Dict with the analytic winner/survivors, state equation and the
+        numerical trajectories. With ``plot=True`` a list ``[dict, Image]`` is
+        returned instead.
     """
     alpha = _clean_float(alpha, "alpha")
     beta = _clean_float(beta, "beta")
@@ -916,10 +988,10 @@ def dynamic_2d_lanchester_solve(
         "x0": x0, "y0": y0, "t0": t0, "t_fin": t_fin, "h": h,
     }
     result = dynamic_2d_lanchester.Dynamic2DLanchesterService.solve(payload)
-    return _finalize_deep(result)
+    return _maybe_plot("dynamic_2d_lanchester_solve", _finalize_deep(result), plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def dynamic_2d_nonhomogeneous_solve(
     a: float = 0.0,
     b: float = -1.0,
@@ -937,6 +1009,7 @@ def dynamic_2d_nonhomogeneous_solve(
     y_min: float = -5.0,
     y_max: float = 5.0,
     cantidad_trayectorias: int = 16,
+    plot: bool = False,
 ) -> dict:
     """Solve the non-homogeneous 2D system X' = A·X + B(t) with constant or time-varying forcing.
 
@@ -945,9 +1018,12 @@ def dynamic_2d_nonhomogeneous_solve(
         e, f: forcing components B(t); a number or an expression in t (e.g. "sin(2*t)").
         x0, y0, t0, t_fin, h: integration settings.
         x_min..y_max, cantidad_trayectorias: portrait settings.
+        plot: When True, also return a PNG phase portrait.
 
     Returns:
-        Dict with the classification, equilibrium/particular solution, analytic solution and trajectories.
+        Dict with the classification, equilibrium/particular solution, analytic
+        solution and trajectories. With ``plot=True`` a list ``[dict, Image]``
+        is returned instead.
     """
     x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, traj = _clean_dynamic2d_inputs(
         x0, y0, t0, t_fin, h, x_min, x_max, y_min, y_max, cantidad_trayectorias
@@ -970,7 +1046,7 @@ def dynamic_2d_nonhomogeneous_solve(
         "cantidad_trayectorias": traj,
     }
     result = dynamic_2d_non_homogeneous.Dynamic2DNonHomogeneousService.solve(payload)
-    return _finalize_deep(result)
+    return _maybe_plot("dynamic_2d_nonhomogeneous_solve", _finalize_deep(result), plot)
 
 
 # --------------------------------------------------------------------------
@@ -981,13 +1057,14 @@ def _compile_root(func_str: str) -> Callable:
     return root_finding.RootFindingService.compilar_funcion(normalized)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def root_newton_raphson(
     func_str: str,
     x0: float,
     tol: float = 1e-6,
     max_iter: int = 100,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Find a root of f(x) = 0 with the Newton-Raphson method (numeric derivative).
 
@@ -997,9 +1074,11 @@ def root_newton_raphson(
         tol: Convergence tolerance.
         max_iter: Maximum iterations.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of f(x) and the root.
 
     Returns:
-        Dict with the root, iteration table and convergence flag.
+        Dict with the root, iteration table and convergence flag. With
+        ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     x0 = _clean_float(x0, "x0")
     tol = _clean_float(tol, "tol", positive=True)
@@ -1010,16 +1089,17 @@ def root_newton_raphson(
     result = root_finding.RootFindingService.newton_raphson(
         func, x0, tol=tol, max_iter=max_iter, precision=precision
     )
-    return _finalize(result)
+    return _maybe_plot("root_newton_raphson", _finalize(result), plot, {"func_str": func_str, "x0": x0})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def root_punto_fijo(
     g_str: str,
     x0: float,
     tol: float = 1e-6,
     max_iter: int = 100,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Find a fixed point of g(x) = x with the fixed-point iteration method.
 
@@ -1031,9 +1111,11 @@ def root_punto_fijo(
         tol: Convergence tolerance.
         max_iter: Maximum iterations.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of g(x) and y = x.
 
     Returns:
-        Dict with the fixed point, the Lipschitz check, iteration table and convergence flag.
+        Dict with the fixed point, the Lipschitz check, iteration table and
+        convergence flag. With ``plot=True`` a list ``[dict, Image]`` is returned.
     """
     x0 = _clean_float(x0, "x0")
     tol = _clean_float(tol, "tol", positive=True)
@@ -1044,16 +1126,17 @@ def root_punto_fijo(
     result = root_finding.RootFindingService.punto_fijo(
         func, x0, tol=tol, max_iter=max_iter, precision=precision
     )
-    return _finalize(result)
+    return _maybe_plot("root_punto_fijo", _finalize(result), plot, {"g_str": g_str, "x0": x0})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def root_aitken(
     g_str: str,
     x0: float,
     tol: float = 1e-6,
     max_iter: int = 100,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Accelerate fixed-point iteration with Aitken's delta-squared method.
 
@@ -1063,9 +1146,11 @@ def root_aitken(
         tol: Convergence tolerance.
         max_iter: Maximum iterations.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of g(x) and y = x.
 
     Returns:
         Dict with the accelerated root, iteration table and convergence flag.
+        With ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     x0 = _clean_float(x0, "x0")
     tol = _clean_float(tol, "tol", positive=True)
@@ -1076,10 +1161,10 @@ def root_aitken(
     result = root_finding.RootFindingService.aitken(
         func, x0, tol=tol, max_iter=max_iter, precision=precision
     )
-    return _finalize(result)
+    return _maybe_plot("root_aitken", _finalize(result), plot, {"g_str": g_str, "x0": x0})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def root_comparar(
     func_str: str,
     g_str: str,
@@ -1089,6 +1174,7 @@ def root_comparar(
     tol: float = 1e-6,
     max_iter: int = 100,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Compare bisection, fixed-point, Newton-Raphson and Aitken on the same problem.
 
@@ -1098,9 +1184,11 @@ def root_comparar(
         a, b: Bracket for bisection (f(a) and f(b) must differ in sign).
         x0: Initial guess.
         tol, max_iter, precision: Shared tolerances.
+        plot: When True, also return a PNG bar chart of the iterations used.
 
     Returns:
-        Dict with per-method results.
+        Dict with per-method results. With ``plot=True`` a list ``[dict, Image]``
+        is returned instead.
     """
     a = _clean_float(a, "a")
     b = _clean_float(b, "b")
@@ -1115,7 +1203,7 @@ def root_comparar(
     result = root_finding.RootFindingService.comparar_metodos(
         func_str, g_str, a, b, x0, tol=tol, max_iter=max_iter, precision=precision
     )
-    return _finalize(result)
+    return _maybe_plot("root_comparar", _finalize(result), plot)
 
 
 # --------------------------------------------------------------------------
@@ -1137,7 +1225,7 @@ def _integral_bounds(a: float, b: float, n: int, precision: int, epsilon):
     return a, b, n, precision, epsilon
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def integral_rectangulo(
     func_str: str,
     a: float,
@@ -1145,6 +1233,7 @@ def integral_rectangulo(
     n: int,
     epsilon: float | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Approximate ∫ₐᵇ f(x) dx with the composite midpoint (rectangle) rule.
 
@@ -1154,19 +1243,21 @@ def integral_rectangulo(
         n: Number of subintervals.
         epsilon: Optional point in [a, b] for the truncation error bound.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of f(x) over [a, b].
 
     Returns:
-        Dict with the integral, error estimates and table.
+        Dict with the integral, error estimates and table. With ``plot=True`` a
+        list ``[dict, Image]`` is returned instead.
     """
     a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
     func = _compile_integrand(func_str)
     result = integration.IntegrationService.rectangulo_compuesto(
         func, a, b, n=n, precision=precision, epsilon=epsilon
     )
-    return _finalize(result)
+    return _maybe_plot("integral_rectangulo", _finalize(result), plot, {"func_str": func_str, "a": a, "b": b})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def integral_trapecio(
     func_str: str,
     a: float,
@@ -1174,6 +1265,7 @@ def integral_trapecio(
     n: int,
     epsilon: float | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Approximate ∫ₐᵇ f(x) dx with the composite trapezoidal rule.
 
@@ -1183,19 +1275,21 @@ def integral_trapecio(
         n: Number of subintervals.
         epsilon: Optional point in [a, b] for the truncation error bound.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of f(x) over [a, b].
 
     Returns:
-        Dict with the integral, error estimates and table.
+        Dict with the integral, error estimates and table. With ``plot=True`` a
+        list ``[dict, Image]`` is returned instead.
     """
     a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
     func = _compile_integrand(func_str)
     result = integration.IntegrationService.trapecio_compuesto(
         func, a, b, n=n, precision=precision, epsilon=epsilon
     )
-    return _finalize(result)
+    return _maybe_plot("integral_trapecio", _finalize(result), plot, {"func_str": func_str, "a": a, "b": b})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def integral_simpson38(
     func_str: str,
     a: float,
@@ -1203,6 +1297,7 @@ def integral_simpson38(
     n: int,
     epsilon: float | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Approximate ∫ₐᵇ f(x) dx with the composite Simpson 3/8 rule.
 
@@ -1212,9 +1307,11 @@ def integral_simpson38(
         n: Number of subintervals (must be a multiple of 3).
         epsilon: Optional point in [a, b] for the truncation error bound.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of f(x) over [a, b].
 
     Returns:
-        Dict with the integral, error estimates and table.
+        Dict with the integral, error estimates and table. With ``plot=True`` a
+        list ``[dict, Image]`` is returned instead.
     """
     a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
     _require(n % 3 == 0, "n must be a multiple of 3 for Simpson 3/8.")
@@ -1222,10 +1319,10 @@ def integral_simpson38(
     result = integration.IntegrationService.simpson_38_compuesto(
         func, a, b, n=n, precision=precision, epsilon=epsilon
     )
-    return _finalize(result)
+    return _maybe_plot("integral_simpson38", _finalize(result), plot, {"func_str": func_str, "a": a, "b": b})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def integral_comparar(
     func_str: str,
     a: float,
@@ -1233,6 +1330,7 @@ def integral_comparar(
     n: int,
     epsilon: float | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Compare rectangle, trapezoid, Simpson 1/3 and Simpson 3/8 on the same integral.
 
@@ -1241,22 +1339,24 @@ def integral_comparar(
         a, b: Integration limits (b > a).
         n: Number of subintervals (Simpson 1/3 needs even, 3/8 needs multiple of 3).
         epsilon, precision: Error-bound and rounding settings.
+        plot: When True, also return a PNG bar chart comparing the four rules.
 
     Returns:
-        Dict with per-method results and success flags.
+        Dict with per-method results and success flags. With ``plot=True`` a list
+        ``[dict, Image]`` is returned instead.
     """
     a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
     compiler.validate(func_str, variables=("x",))
     result = integration.IntegrationService.comparar_metodos(
         func_str, a, b, n=n, precision=precision, epsilon=epsilon
     )
-    return _finalize(result)
+    return _maybe_plot("integral_comparar", _finalize(result), plot)
 
 
 # --------------------------------------------------------------------------
 # ODE (Euler / Heun) and Monte Carlo convergence
 # --------------------------------------------------------------------------
-def _ode_solve(metodo: str, ecuacion_str, x0, y0, xf, h, tol, precision) -> dict:
+def _ode_solve(metodo: str, ecuacion_str, x0, y0, xf, h, tol, precision, plot: bool = False) -> object:
     x0 = _clean_float(x0, "x0")
     y0 = _clean_float(y0, "y0")
     xf = _clean_float(xf, "xf")
@@ -1273,10 +1373,11 @@ def _ode_solve(metodo: str, ecuacion_str, x0, y0, xf, h, tol, precision) -> dict
     result = ode.ODEService.ejecutar_metodo(
         metodo, normalized, x0, y0, xf, h, precision=precision, tol=tol
     )
-    return _finalize(result, downsample_keys=("x_plot", "y_plot", "y_exacta_plot"))
+    result = _finalize(result, downsample_keys=("x_plot", "y_plot", "y_exacta_plot"))
+    return _maybe_plot(f"ode_{metodo}", result, plot, {"metodo": metodo.upper()})
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def ode_euler(
     ecuacion_str: str,
     x0: float,
@@ -1285,6 +1386,7 @@ def ode_euler(
     h: float,
     tol: float | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Solve y'(x) = f(x, y), y(x0) = y0 with the explicit Euler method (1st order).
 
@@ -1295,14 +1397,16 @@ def ode_euler(
         h: Step size (must be positive).
         tol: Optional tolerance flag for the final error.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of the solution.
 
     Returns:
-        Dict with the numerical solution, exact solution (when available) and errors.
+        Dict with the numerical solution, exact solution (when available) and
+        errors. With ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
-    return _ode_solve("euler", ecuacion_str, x0, y0, xf, h, tol, precision)
+    return _ode_solve("euler", ecuacion_str, x0, y0, xf, h, tol, precision, plot=plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def ode_heun(
     ecuacion_str: str,
     x0: float,
@@ -1311,6 +1415,7 @@ def ode_heun(
     h: float,
     tol: float | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Solve y'(x) = f(x, y), y(x0) = y0 with Heun's predictor-corrector method (2nd order).
 
@@ -1321,14 +1426,16 @@ def ode_heun(
         h: Step size (must be positive).
         tol: Optional tolerance flag for the final error.
         precision: Rounding digits.
+        plot: When True, also return a PNG plot of the solution.
 
     Returns:
-        Dict with the numerical solution, exact solution (when available) and errors.
+        Dict with the numerical solution, exact solution (when available) and
+        errors. With ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
-    return _ode_solve("heun", ecuacion_str, x0, y0, xf, h, tol, precision)
+    return _ode_solve("heun", ecuacion_str, x0, y0, xf, h, tol, precision, plot=plot)
 
 
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def mc_convergencia_1d(
     func_str: str,
     a: float,
@@ -1336,6 +1443,7 @@ def mc_convergencia_1d(
     N: int = 10000,
     seed: int | None = None,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Show how the mean-value Monte Carlo estimate converges as samples accumulate.
 
@@ -1345,9 +1453,11 @@ def mc_convergencia_1d(
         N: Total number of samples.
         seed: Optional RNG seed.
         precision: Rounding digits.
+        plot: When True, also return a PNG of the running average.
 
     Returns:
-        Dict with the cumulative running average over the samples.
+        Dict with the cumulative running average over the samples. With
+        ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     a = _clean_float(a, "a")
     b = _clean_float(b, "b")
@@ -1362,18 +1472,19 @@ def mc_convergencia_1d(
     result = monte_carlo.MonteCarloService.convergencia_1d(
         func, a, b, N=N, seed=seed, precision=precision
     )
-    return _finalize_deep(result)
+    return _maybe_plot("mc_convergencia_1d", _finalize_deep(result), plot)
 
 
 # --------------------------------------------------------------------------
 # Differentiation
 # --------------------------------------------------------------------------
-@mcp.tool()
+@mcp.tool(structured_output=False)
 def finite_differences(
     func_str: str,
     x_val: float,
     h: float = 1e-5,
     precision: int = 8,
+    plot: bool = False,
 ) -> dict:
     """Approximate the first and second derivatives of f(x) at x with finite differences.
 
@@ -1386,9 +1497,11 @@ def finite_differences(
         x_val: Point where the derivative is evaluated.
         h: Step size (small, positive).
         precision: Rounding digits.
+        plot: When True, also return a PNG of f(x) and its exact tangent.
 
     Returns:
-        Dict with the exact and numerical derivatives and their errors.
+        Dict with the exact and numerical derivatives and their errors. With
+        ``plot=True`` a list ``[dict, Image]`` is returned instead.
     """
     x_val = _clean_float(x_val, "x_val")
     h = _clean_float(h, "h", positive=True)
@@ -1399,7 +1512,9 @@ def finite_differences(
     result = differentiation.DifferentiationService.calcular_diferencias_completas(
         normalized, x_val=x_val, h=h, precision=precision
     )
-    return _finalize(result)
+    return _maybe_plot(
+        "finite_differences", _finalize(result), plot, {"func_str": func_str, "x_val": x_val, "h": h}
+    )
 
 
 def run() -> None:
