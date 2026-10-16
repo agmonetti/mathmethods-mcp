@@ -45,3 +45,20 @@ The math core mirrors `modeladoYsimulacion-web/backend/app/methods/`. After
 upstream changes, re-copy the files and rewrite `from app.core.utils import
 ...` to `from .utils import ...`. See the README "Keeping the vendored core in
 sync" section.
+
+## Releasing
+
+Maintainers only. Bump the version in `pyproject.toml`, `mathmethods/__init__.py`
+and `package.json` (they must match), run `uv lock` (the lockfile records the
+project version and CI runs `uv lock --check`), add a `CHANGELOG.md` entry, then
+push a tag:
+
+```bash
+uv lock
+git commit -am "chore: release vX.Y.Z"
+git tag vX.Y.Z && git push origin main --tags
+```
+
+`.github/workflows/release.yml` runs CI first, then publishes to PyPI and npm via
+Trusted Publishing (OIDC, no stored tokens). See the README "Releasing" section
+for the one-time registry setup.

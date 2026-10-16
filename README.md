@@ -460,18 +460,82 @@ driven by an LLM, so defense in depth is applied:
   correct.
 - The 1D bifurcation table is downsampled to 300 rows for readability.
 
-## Publishing to PyPI
+## Releasing
 
-The package is publish-ready (`uv build` succeeds and the wheel exposes all
-tools). To release:
+Releases are automated: bump the version, push a tag, and both registries are
+updated by CI. No tokens or repository secrets are stored — PyPI and npm use
+GitHub OIDC ([Trusted Publishing](https://docs.pypi.org/trusted-publishers/)).
+
+1. Bump the version in **three** places (they must match the tag):
+   `pyproject.toml`, `mathmethods/__init__.py` and `package.json`.
+2. Refresh the lockfile — CI runs `uv lock --check`, and the lock records the
+   project version, so forgetting this **breaks the build**:
+
+   ```bash
+   uv lock
+   ```
+
+3. Add an entry to `CHANGELOG.md`.
+4. Commit and push, then tag:
+
+   ```bash
+   git commit -am "chore: release v0.3.0"
+   git tag v0.3.0 && git push origin main --tags
+   ```
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which:
+
+- runs the full CI suite (`test` + `viz`) — a red commit can never be released;
+- verifies the tag matches the version in `pyproject.toml` and `package.json`;
+- builds the sdist + wheel in a credential-free job, then publishes them to
+  **PyPI**;
+- publishes the wrapper to **npm** (`@agmonetti/mathmethods-mcp`) with an
+  automatic provenance attestation.
+
+### One-time Trusted Publisher setup
+
+Configure these once; afterwards every tag publishes with no manual step.
+
+**PyPI** — project *mathmethods-mcp* → *Settings → Publishing* → add a
+trusted publisher:
+
+| Field | Value |
+|-------|-------|
+| Owner | `agmonetti` |
+| Repository | `mathmethods-mcp` |
+| Workflow name | `release.yml` |
+| Environment name | `pypi` |
+
+**npm** — package *@agmonetti/mathmethods-mcp* → *Settings → Trusted Publisher*:
+
+| Field | Value |
+|-------|-------|
+| Provider | GitHub Actions |
+| Organization or user | `agmonetti` (no `@`) |
+| Repository | `mathmethods-mcp` |
+| Workflow filename | `release.yml` |
+| Environment name | `npm` |
+| Allowed actions | ✅ **npm publish** (and/or *npm stage publish*) |
+
+> **npm gotchas.** A trusted publisher created after 2026-09-03 defaults to
+> *stage publish only* — tick **npm publish** or the release fails with
+> `ENEEDAUTH`. A brand-new trusted publisher **expires if it does not get a
+> successful publish within 2 days**, so set it up right before the first
+> release. While there, set *Publishing access* to **require 2FA and disallow
+> tokens**.
+
+### Manual fallback
+
+If you ever need to publish by hand (e.g. before the tag exists):
 
 ```bash
-uv build
-uv publish          # requires a PyPI token: `uv login` or UV_PUBLISH_TOKEN
+uv build                       # sdist + wheel in dist/
+uv publish                     # uses UV_PUBLISH_TOKEN or `uv login`
+npm publish --access public    # requires `npm login`
 ```
 
 Once published, every client config just works with `uvx mathmethods-mcp` (no
-paths, no venv). Bump `version` in `pyproject.toml` before each release.
+paths, no venv).
 
 ## Keeping the vendored core in sync
 

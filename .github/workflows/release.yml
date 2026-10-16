@@ -1,0 +1,116 @@
+name: Release
+
+# Publishing runs when a version tag is pushed (e.g. `git tag v0.3.0`).
+# CI runs first, so a red commit can never be released. Both registries use
+# Trusted Publishing (GitHub OIDC) — no API tokens or repository secrets.
+on:
+  push:
+    tags: ["v*"]
+
+# Least privilege by default; the publish jobs opt into `id-token: write`.
+permissions:
+  contents: read
+
+# Never publish two tags at the same time.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Reuse the CI suite from ci.yml (tests + lint, with and without `viz`).
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  # Build once, in a job that holds no publishing credential; the publish jobs
+  # only download what they need.
+  build:
+    name: Build distributions
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Verify tag matches every declared version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          fail=0
+          check() { # file, human name, version
+            if [ "$3" != "$tag" ]; then
+              echo "::error::$1 version ($3) does not match tag ($tag)"
+              fail=1
+            fi
+          }
+          check pyproject.toml "pyproject" "$(uv version --short)"
+          pkg="$(sed -n 's/^[[:space:]]*"version": "\([^"]*\)".*/\1/p' package.json | head -n1)"
+          check package.json "package.json" "$pkg"
+          runtime="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' mathmethods/__init__.py)"
+          check mathmethods/__init__.py "__init__.py" "$runtime"
+          [ "$fail" -eq 0 ] || exit 1
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # The GitHub environment name must match the one registered on PyPI.
+    environment:
+      name: pypi
+      url: https://pypi.org/project/mathmethods-mcp/
+    # Job-level `permissions` REPLACE the workflow block, so `contents` must be
+    # repeated here or checkout/artifact access loses its read scope.
+    permissions:
+      contents: read
+      id-token: write # mandatory for PyPI Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Keeps re-runs after a partial failure idempotent.
+          skip-existing: true
+
+  npm:
+    name: Publish to npm
+    needs: [ci, build]
+    runs-on: ubuntu-latest
+    # The environment name must match the npm Trusted Publisher configuration.
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/@agmonetti/mathmethods-mcp
+    permissions:
+      contents: read
+      id-token: write # mandatory for npm Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # Node 24 (>= 22.14) bundles npm >= 11.5.1, the OIDC floor. `registry-url`
+      # is required for the OIDC token exchange; do NOT set NODE_AUTH_TOKEN.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false # never cache in release builds
+
+      - name: Publish to npm
+        run: npm publish --access public

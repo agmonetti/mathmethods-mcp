@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `.github/workflows/release.yml`: pushing a `v*` tag runs the full CI suite and
+  then publishes to PyPI and npm automatically. Both registries use GitHub OIDC
+  (Trusted Publishing), so no API tokens or repository secrets are stored. The
+  workflow verifies the tag matches the version in `pyproject.toml` and
+  `package.json`, builds the distributions in a credential-free job, and npm
+  publishes with an automatic provenance attestation.
+- `ci.yml` is now reusable (`workflow_call`) so the release workflow can gate
+  publishing on a green test run.
+
+### Changed
+
+- CI actions updated to `actions/checkout@v6`, clearing the Node.js 20
+  deprecation warning.
+
 ## [0.2.0] - 2026-10-16
 
 ### Added

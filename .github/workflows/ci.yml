@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Allow the release workflow to gate publishing on a green test run.
+  workflow_call:
 
 jobs:
   test:
@@ -11,7 +13,7 @@ jobs:
     # matplotlib error path; rendering tests are skipped.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -34,7 +36,7 @@ jobs:
     # With the optional `viz` extra: runs the full plotting suite.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
