@@ -104,7 +104,7 @@ def _downsample(values, max_points: int = MAX_PLOT_POINTS) -> object:
     # Always include the first and last element so curves / time-series are
     # never truncated at the boundaries.
     step = (len(values) - 1) / (max_points - 1)
-    indices = sorted({0, *(int(round(i * step)) for i in range(max_points)), len(values) - 1})
+    indices = sorted({0, *(round(i * step) for i in range(max_points)), len(values) - 1})
     # If forced boundary elements push us over max_points, drop evenly from the middle.
     while len(indices) > max_points:
         mid = len(indices) // 2
