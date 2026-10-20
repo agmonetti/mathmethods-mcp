@@ -40,7 +40,7 @@ ALLOWED_FUNCTIONS: frozenset[str] = frozenset(
         "sinh", "cosh", "tanh", "coth", "sech", "csch",
         "asinh", "acosh", "atanh",
         # exponential / logarithmic / roots
-        "exp", "log", "ln", "sqrt", "cbrt", "root",
+        "exp", "log", "sqrt", "cbrt", "root",
         # absolute value / sign / rounding
         "Abs", "sign", "floor", "ceiling", "frac",
         # gamma family
@@ -55,6 +55,9 @@ ALLOWED_FUNCTIONS: frozenset[str] = frozenset(
 _BUILTIN_CONSTANTS = {"e": sp.E, "pi": sp.pi, "E": sp.E}
 
 _SINGLE_VAR = re.compile(r"(?<![A-Za-z0-9_])[eE]\^")
+# Match the bare token ``ln`` or ``sen`` (not part of a longer identifier).
+_LN_RE = re.compile(r"\bln\b")
+_SEN_RE = re.compile(r"\bsen\b")
 # Unicode letters (incl. Greek symbols like α, β) start identifiers; digits
 # and leading underscores are rejected by the lexical gate.
 _IDENTIFIER_RE = re.compile(r"[^\W\d_]\w*", re.UNICODE)
@@ -71,9 +74,12 @@ def normalize(expr: str) -> str:
     Converts ``e^x`` / ``e^(-x)`` into ``E**x`` / ``E**(-x)`` (the old
     ``exp(`` replacement left unbalanced parentheses), ``sen`` into ``sin``,
     ``ln`` into ``log`` and every remaining ``^`` into ``**``.
+
+    Token-level replacements (``ln`` → ``log``, ``sen`` → ``sin``) use word
+    boundaries so they never corrupt sub-strings like ``sin`` or ``plan``.
     """
-    out = expr.replace("sen", "sin")
-    out = out.replace("ln", "log")
+    out = _SEN_RE.sub("sin", expr)
+    out = _LN_RE.sub("log", out)
     out = _SINGLE_VAR.sub("E**", out)
     out = out.replace("^", "**")
     return out

@@ -196,3 +196,62 @@ def test_results_are_json_serializable(call):
     result = call()
     json.dumps(result)  # must not raise
     assert isinstance(result, dict)
+
+
+# --------------------------------------------------------------------------
+# Fix 3 — compiler.normalize: token-level ln/sen replacement (v0.2.1)
+# --------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        # ln inside sin must NOT corrupt the sin token
+        ("sin(ln(x))", "sin(log(x))"),
+        # standalone ln is still replaced
+        ("ln(x)", "log(x)"),
+        # sin alone must remain untouched
+        ("sin(x)", "sin(x)"),
+        # sen still normalises to sin (word-boundary safe)
+        ("sen(x)", "sin(x)"),
+        # combo: sen and ln together
+        ("sen(ln(x))", "sin(log(x))"),
+        # ln nested inside cos
+        ("cos(ln(x))", "cos(log(x))"),
+    ],
+)
+def test_compiler_normalize_token_safe(raw, expected):
+    assert compiler.normalize(raw) == expected
+
+
+def test_compiler_sin_ln_compiles_and_evaluates():
+    """sin(ln(x)) must compile without error and return the correct value."""
+    fn = compiler.compile_callable("sin(ln(x))", variables=("x",))
+    assert fn(math.e) == pytest.approx(math.sin(1.0), rel=1e-9)
+
+
+# --------------------------------------------------------------------------
+# Fix 2 — _downsample preserves first and last elements (v0.2.1)
+# --------------------------------------------------------------------------
+def test_downsample_preserves_extremes():
+    from mathmethods.server import _downsample
+
+    values = list(range(1000))
+    result = _downsample(values, max_points=100)
+    assert result[0] == values[0], "first element must be preserved"
+    assert result[-1] == values[-1], "last element must be preserved"
+    assert len(result) == 100
+
+
+def test_downsample_short_list_unchanged():
+    from mathmethods.server import _downsample
+
+    short = [1, 2, 3]
+    assert _downsample(short, max_points=10) is short
+
+
+# --------------------------------------------------------------------------
+# Fix 1 — integral_simpson13: actionable hint when n is odd (v0.2.1)
+# --------------------------------------------------------------------------
+def test_simpson13_odd_n_gives_actionable_hint():
+    """The error for an odd n must mention the suggested even value."""
+    with pytest.raises(ValueError, match="n=4"):
+        integral_simpson13(func_str="x**2", a=0, b=2, n=3)

@@ -7,7 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+## [0.2.1] - 2026-10-20
+
+### Fixed
+
+- **`compiler.normalize` — silent token corruption** (`sin(ln(x))` → `silog(log(x))`):
+  bare-string `.replace("ln", "log")` and `.replace("sen", "sin")` corrupted any
+  identifier that contained the sub-sequence `ln` or `sen` (e.g. `sin`, `plan`).
+  Both replacements now use word-boundary regexes (`\bln\b`, `\bsen\b`) so only
+  the standalone tokens are rewritten. `"ln"` removed from `ALLOWED_FUNCTIONS`
+  (it was always normalised to `"log"` before the lexer ran; keeping it there was
+  misleading).
+- **`_downsample` — first / last elements not preserved**: the index arithmetic
+  `values[int(i * step)]` could skip `values[0]` and `values[-1]`, truncating
+  plots and time-series at both ends. The sampler now always includes the boundary
+  indices and adjusts the middle points to stay within `max_points`.
+- **`integral_simpson13` — opaque error for odd `n`**: the previous message
+  (`"n must be even for Simpson 1/3"`) gave no remediation hint to the calling
+  LLM. The new message includes the suggested correction, e.g.
+  `"Try n=4 instead."`.
+
+### Added (CI / release)
 
 - `.github/workflows/release.yml`: pushing a `v*` tag runs the full CI suite and
   then publishes to PyPI and npm automatically. Both registries use GitHub OIDC

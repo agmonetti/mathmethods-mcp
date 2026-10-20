@@ -1,6 +1,6 @@
 {
   "name": "@agmonetti/mathmethods-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server exposing numerical methods tools: root finding, integration, ODEs, interpolation, Monte Carlo, and dynamical systems.",
   "keywords": [
     "mcp",

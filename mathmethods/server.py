@@ -101,8 +101,15 @@ def _json_safe(value, _depth: int = 0) -> object:
 def _downsample(values, max_points: int = MAX_PLOT_POINTS) -> object:
     if not isinstance(values, list) or len(values) <= max_points:
         return values
-    step = len(values) / max_points
-    return [values[int(i * step)] for i in range(max_points)]
+    # Always include the first and last element so curves / time-series are
+    # never truncated at the boundaries.
+    step = (len(values) - 1) / (max_points - 1)
+    indices = sorted({0, *(int(round(i * step)) for i in range(max_points)), len(values) - 1})
+    # If forced boundary elements push us over max_points, drop evenly from the middle.
+    while len(indices) > max_points:
+        mid = len(indices) // 2
+        indices.pop(mid)
+    return [values[i] for i in indices]
 
 
 def _finalize(result, *, downsample_keys: tuple[str, ...] = ()) -> dict:
@@ -237,7 +244,11 @@ def integral_simpson13(
     n = _clean_int(n, "n", minimum=2, maximum=MAX_SUBINTERVALS)
     precision = _clean_int(precision, "precision", minimum=0, maximum=MAX_PRECISION)
     _require(b > a, "b must be greater than a.")
-    _require(n % 2 == 0, "n must be even for Simpson 1/3.")
+    if n % 2 != 0:
+        raise ValueError(
+            f"n must be even for Simpson 1/3 (got n={n}). "
+            f"Try n={n + 1} instead."
+        )
     if epsilon is not None:
         epsilon = _clean_float(epsilon, "epsilon")
 
