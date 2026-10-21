@@ -37,7 +37,21 @@ class RootFindingService:
             
         if not (math.isfinite(fa) and math.isfinite(fb)):
             raise ValueError("f(a) o f(b) no es finito. La función no está definida o diverge en el intervalo.")
-        if fa * fb >= 0:
+
+        # Una raíz exacta en un extremo es una solución válida aunque no haya
+        # cambio de signo estricto en el interior del intervalo.
+        for endpoint, value, name in ((a, fa, "a"), (b, fb, "b")):
+            if value == 0 or abs(value) < tol:
+                return {
+                    "metodo": "Bisección",
+                    "raiz": round(endpoint, precision),
+                    "iteraciones": [],
+                    "convergencia": True,
+                    "num_iter": 0,
+                    "nota": f"La raíz coincide con el extremo {name} del intervalo.",
+                }
+
+        if fa * fb > 0:
             raise ValueError("f(a) y f(b) deben tener signos opuestos (f(a) * f(b) < 0).")
         
         iteraciones = []

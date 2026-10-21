@@ -6,9 +6,12 @@ import math
 import pytest
 
 from mathmethods import compiler
+from mathmethods.core.utils import normalize_expr
 from mathmethods.server import (
     integral_simpson13,
     interpolation_lagrange,
+    ode_euler,
+    ode_heun,
     ode_rk4,
     root_bisection,
 )
@@ -94,6 +97,22 @@ def test_root_bisection_requires_sign_change():
         root_bisection(func_str="x**2 - 4", a=3, b=5)
 
 
+@pytest.mark.parametrize(
+    "func_str,a,b,expected",
+    [
+        ("x", 0, 1, 0.0),
+        ("x - 2", 1, 2, 2.0),
+        ("x", -1, 0, 0.0),
+    ],
+)
+def test_root_bisection_accepts_endpoint_root(func_str, a, b, expected):
+    result = root_bisection(func_str=func_str, a=a, b=b)
+    assert result["convergencia"] is True
+    assert result["raiz"] == pytest.approx(expected)
+    assert result["num_iter"] == 0
+    assert "extremo" in result["nota"]
+
+
 def test_root_bisection_rejects_invalid_input():
     with pytest.raises(Exception):
         root_bisection(func_str="x**2 - 4", a=5, b=0)  # b < a
@@ -146,6 +165,23 @@ def test_rk4_works_when_exact_solution_unavailable():
 
 def test_rk4_reaches_endpoint_exactly():
     result = ode_rk4(ecuacion_str="y", x0=0, y0=1, xf=1, h=0.3)
+    assert result["x_plot"][-1] == pytest.approx(1.0)
+
+
+def test_ode_uses_effective_step_when_h_does_not_divide():
+    """The reported x_n and the integration step must describe the same grid."""
+    result = ode_euler(ecuacion_str="y", x0=0, y0=1, xf=1, h=0.3)
+    assert result["h"] == pytest.approx(0.3)
+    assert result["h_efectivo"] == pytest.approx(0.25)
+    first = result["tabla"][1]
+    assert first["xn"] == pytest.approx(0.25)
+    assert first["yn"] == pytest.approx(1.25)
+    assert first["error"] == pytest.approx(abs(math.exp(0.25) - 1.25), rel=1e-6)
+
+
+def test_ode_effective_step_never_exceeds_requested_h():
+    result = ode_heun(ecuacion_str="y", x0=0, y0=1, xf=1, h=0.3)
+    assert result["h_efectivo"] <= result["h"]
     assert result["x_plot"][-1] == pytest.approx(1.0)
 
 
@@ -255,3 +291,11 @@ def test_simpson13_odd_n_gives_actionable_hint():
     """The error for an odd n must mention the suggested even value."""
     with pytest.raises(ValueError, match="n=4"):
         integral_simpson13(func_str="x**2", a=0, b=2, n=3)
+
+
+# --------------------------------------------------------------------------
+# v0.2.2 — token-safe sen normalization in the vendored core
+# --------------------------------------------------------------------------
+def test_core_normalize_sen_is_token_safe():
+    assert normalize_expr("sense + sen(x)") == "sense + sin(x)"
+    assert normalize_expr("sin(x)") == "sin(x)"

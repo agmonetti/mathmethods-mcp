@@ -46,6 +46,7 @@ _CONSTANTS = frozenset({"e", "E", "pi"})
 _IDENTIFIER_RE = re.compile(r"[^\W\d_]\w*", re.UNICODE)
 _NUMBER_RE = re.compile(r"(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
 _SINGLE_VAR = re.compile(r"(?<![A-Za-z0-9_])[eE]\^")
+_SEN_RE = re.compile(r"\bsen\b")
 _ALLOWED_PUNCTUATION = set("()+-,*/%<>!=:")
 
 
@@ -55,8 +56,11 @@ def normalize_expr(expr: str) -> str:
     ``e^x`` / ``e^(-x)`` become ``E**x`` / ``E**(-x)`` (fixes the old
     unbalanced ``exp(`` replacement), ``sen`` becomes ``sin`` and every
     remaining ``^`` becomes ``**``.
+
+    The ``sen`` replacement is token-level (word boundaries) so identifiers
+    such as ``sense`` are never corrupted.
     """
-    out = expr.replace("sen", "sin")
+    out = _SEN_RE.sub("sin", expr)
     out = _SINGLE_VAR.sub("E**", out)
     out = out.replace("^", "**")
     return out

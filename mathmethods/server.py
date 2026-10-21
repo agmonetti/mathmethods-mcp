@@ -1348,7 +1348,8 @@ def integral_comparar(
     Args:
         func_str: Math expression in x.
         a, b: Integration limits (b > a).
-        n: Number of subintervals (Simpson 1/3 needs even, 3/8 needs multiple of 3).
+        n: Number of subintervals. Must be a multiple of 6 (2 for Simpson 1/3
+            and 3 for Simpson 3/8), so all four rules can run on the same grid.
         epsilon, precision: Error-bound and rounding settings.
         plot: When True, also return a PNG bar chart comparing the four rules.
 
@@ -1357,6 +1358,11 @@ def integral_comparar(
         ``[dict, Image]`` is returned instead.
     """
     a, b, n, precision, epsilon = _integral_bounds(a, b, n, precision, epsilon)
+    _require(
+        n % 6 == 0,
+        "n must be a multiple of 6 for integral_comparar (Simpson 1/3 needs "
+        f"even n and Simpson 3/8 needs a multiple of 3). Try n={n + (-n % 6)}.",
+    )
     compiler.validate(func_str, variables=("x",))
     result = integration.IntegrationService.comparar_metodos(
         func_str, a, b, n=n, precision=precision, epsilon=epsilon
@@ -1377,7 +1383,7 @@ def _ode_solve(metodo: str, ecuacion_str, x0, y0, xf, h, tol, precision, plot: b
     if tol is not None:
         tol = _clean_float(tol, "tol", positive=True)
 
-    n_steps = round((xf - x0) / h)
+    n_steps = math.ceil((xf - x0) / h)
     _require(1 <= n_steps <= MAX_ODE_STEPS, "step count must be between 1 and 2000.")
 
     normalized = compiler.validate(ecuacion_str, variables=("x", "y"))

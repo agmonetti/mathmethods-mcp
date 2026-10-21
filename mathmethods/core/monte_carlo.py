@@ -1,5 +1,6 @@
 import numpy as np
 import sympy as sp
+import math
 import warnings
 from scipy.stats import norm
 from numpy.polynomial.legendre import leggauss
@@ -82,12 +83,14 @@ class MonteCarloService:
                 f"{n_no_finitos} muestra(s) no finita(s) se descartaron; el resultado puede estar sesgado."
             )
 
-        # Para hit-or-miss, la media muestral natural es la media del indicador con signo.
+        # El estimador es la media del indicador CON SIGNO (+1 acierto
+        # positivo, -1 acierto negativo, 0 fuera). Su varianza por muestra es
+        # p+ + p- - (p+ - p-)²; usar p_exito(1-p_exito) subestima el error
+        # cuando la integral cambia de signo.
         media_muestral = (n_pos - n_neg) / N
-
-        # Cálculo Estadístico para Hit-or-Miss (Distribución Binomial)
-        desv_std = np.sqrt(p_exito * (1 - p_exito)) if N > 1 else 0
-        error_est = desv_std / np.sqrt(N) if N > 0 else 0
+        varianza_muestral = max(0.0, p_exito - media_muestral**2)
+        desv_std = math.sqrt(varianza_muestral) if N > 1 else 0.0
+        error_est = desv_std / math.sqrt(N) if N > 0 else 0.0
         
         z_score = MonteCarloService.calcular_z_score(nivel_confianza)
         ic_inf = integral_aprox - z_score * error_est * area_caja

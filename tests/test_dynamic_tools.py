@@ -36,6 +36,18 @@ def test_mc_hit_or_miss_signed():
     assert res["integral"] == pytest.approx(0.0, abs=0.2)
 
 
+def test_mc_hit_or_miss_signed_ci_uses_signed_indicator():
+    """El IC debe usar la varianza de (p+ - p-), no la de (p+ + p-)."""
+    res = mc_hit_or_miss_1d("x", a=-1, b=1, N=20000, seed=1)
+    p_exito = res["n_exitos"] / res["N"]
+    media = res["media_muestral"]
+    expected_std = math.sqrt(max(0.0, p_exito - media**2))
+    assert res["desv_estandar"] == pytest.approx(expected_std, abs=1e-6)
+    # La media muestral es ~0; el IC debe contenerlo y no colapsar.
+    assert res["ic_inf"] < 0 < res["ic_sup"]
+    assert res["ic_sup"] - res["ic_inf"] > 0.05
+
+
 def test_mc_valor_promedio_1d():
     res = mc_valor_promedio_1d("x**2", a=0, b=2, N=20000, seed=42)
     assert res["integral"] == pytest.approx(8 / 3, abs=0.1)
@@ -92,6 +104,15 @@ def test_dynamic_1d_solve_custom_with_params():
     res = dynamic_1d_solve(func_str="-k*x", model="custom", params={"k": 0.5}, initial_conditions=[2.0])
     assert res["equilibria"]
     assert abs(res["equilibria"][0]["x"]) < 1e-6
+
+
+def test_dynamic_1d_custom_param_containing_sen():
+    # "sense" contiene la subsecuencia "sen": no debe convertirse en "sinse".
+    res = dynamic_1d_solve(
+        func_str="sense*x", model="custom", params={"sense": -1.0}, initial_conditions=[0.5]
+    )
+    assert res["equation"] == "-1.0*x"
+    assert res["equilibria"]
 
 
 def test_dynamic_1d_equilibria():

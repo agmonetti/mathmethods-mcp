@@ -62,10 +62,17 @@ class ODEService:
 
         if h <= 0:
             raise ValueError("h debe ser positivo.")
+        if xf <= x0:
+            raise ValueError("xf debe ser mayor que x0.")
 
-        n_steps = int(round((xf - x0) / h))
+        # Rejilla uniforme que siempre alcanza xf. Si h no divide exactamente
+        # el intervalo, se usa el paso efectivo de la rejilla para integrar:
+        # de lo contrario la tabla (x_n) y la solución (calculada con h) no
+        # corresponden al mismo punto.
+        n_steps = max(1, math.ceil((xf - x0) / h))
         x_values = np.linspace(x0, xf, n_steps + 1)
         x_values = np.round(x_values, decimals=10)
+        h_efectivo = (xf - x0) / n_steps
         n_steps = len(x_values)
 
         if f_exacta is not None:
@@ -77,6 +84,7 @@ class ODEService:
             "ecuacion": ecuacion_str,
             "solucion_exacta_str": expr_exacta_str,
             "h": h,
+            "h_efectivo": h_efectivo,
             "tol": tol,
             "tabla": [],
             "x_plot": x_values.tolist(),
@@ -91,7 +99,7 @@ class ODEService:
             y_n1 = np.zeros(n_steps)
             for i in range(n_steps):
                 if i > 0: y_n[i] = y_n1[i-1]
-                y_n1[i] = y_n[i] + h * f(x_values[i], y_n[i])
+                y_n1[i] = y_n[i] + h_efectivo * f(x_values[i], y_n[i])
                 
                 err = abs(y_exacta[i] - y_n[i]) if f_exacta is not None else None
                 resultado["tabla"].append({
@@ -109,8 +117,8 @@ class ODEService:
                 
                 if i < n_steps - 1:
                     f_xy = f(x_values[i], y_n[i])
-                    y_pred[i] = y_n[i] + h * f_xy
-                    y_corr[i] = y_n[i] + (h / 2.0) * (f_xy + f(x_values[i+1], y_pred[i]))
+                    y_pred[i] = y_n[i] + h_efectivo * f_xy
+                    y_corr[i] = y_n[i] + (h_efectivo / 2.0) * (f_xy + f(x_values[i+1], y_pred[i]))
                 
                 err = abs(y_exacta[i] - y_n[i]) if f_exacta is not None else None
                 resultado["tabla"].append({
@@ -132,10 +140,10 @@ class ODEService:
                 if i < n_steps - 1:
                     xn = x_values[i]; yn = y_n[i]
                     k1[i] = f(xn, yn)
-                    k2[i] = f(xn + h/2.0, yn + (h/2.0) * k1[i])
-                    k3[i] = f(xn + h/2.0, yn + (h/2.0) * k2[i])
-                    k4[i] = f(xn + h, yn + h * k3[i])
-                    y_n1[i] = yn + (h / 6.0) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])
+                    k2[i] = f(xn + h_efectivo/2.0, yn + (h_efectivo/2.0) * k1[i])
+                    k3[i] = f(xn + h_efectivo/2.0, yn + (h_efectivo/2.0) * k2[i])
+                    k4[i] = f(xn + h_efectivo, yn + h_efectivo * k3[i])
+                    y_n1[i] = yn + (h_efectivo / 6.0) * (k1[i] + 2*k2[i] + 2*k3[i] + k4[i])
                 
                 err = abs(y_exacta[i] - y_n[i]) if f_exacta is not None else None
                 resultado["tabla"].append({

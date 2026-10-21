@@ -102,7 +102,7 @@ Every client config above also works with
 
 | Tool                    | What it does                                        |
 | ----------------------- | --------------------------------------------------- |
-| `root_bisection`        | Bisection on `[a, b]` (requires a sign change)      |
+| `root_bisection`        | Bisection on `[a, b]` (sign change or endpoint root) |
 | `root_newton_raphson`   | Newton–Raphson with numeric derivative              |
 | `root_punto_fijo`       | Fixed-point iteration `x = g(x)`                    |
 | `root_aitken`           | Aitken Δ² acceleration of fixed point               |
@@ -116,7 +116,7 @@ Every client config above also works with
 | `integral_trapecio`     | Composite trapezoidal rule                          |
 | `integral_simpson13`    | Composite Simpson 1/3 (n even)                      |
 | `integral_simpson38`    | Composite Simpson 3/8 (n multiple of 3)             |
-| `integral_comparar`     | All four rules compared on the same integral        |
+| `integral_comparar`     | All four rules compared (n multiple of 6)           |
 
 ### Differentiation
 

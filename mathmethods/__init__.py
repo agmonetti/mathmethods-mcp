@@ -4,4 +4,4 @@ Exposes the vendored numerical-methods core as Model Context Protocol (MCP)
 tools for LLM agents.
 """
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"

@@ -87,6 +87,12 @@ def test_integral_comparar():
     assert all(v["exito"] for v in res["comparativa"].values())
 
 
+def test_integral_comparar_requires_multiple_of_6():
+    # n=4 is even (Simpson 1/3 works) but not a multiple of 3 (Simpson 3/8 fails).
+    with pytest.raises(ValueError, match="n=6"):
+        integral_comparar("x**2", 0, 1, 4)
+
+
 # --------------------------------------------------------------------------
 # ODE (Euler / Heun)
 # --------------------------------------------------------------------------

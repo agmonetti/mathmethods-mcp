@@ -19,7 +19,7 @@ from .utils import numerical_derivative, safe_parse_expr
 class Dynamic1DService:
     @staticmethod
     def _sanitize_expr(expr: str) -> str:
-        cleaned = expr.replace('sen', 'sin')
+        cleaned = re.sub(r"\bsen\b", "sin", expr)
         cleaned = re.sub(r'(?<![A-Za-z0-9_])[eE]\^', 'E**', cleaned).replace('^', '**')
         return cleaned
 

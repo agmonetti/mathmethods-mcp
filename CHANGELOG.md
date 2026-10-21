@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-21
+
+### Fixed
+
+- **`root_bisection` — root at interval boundary**: when $f(a) = 0$ or $f(b) = 0$
+  (within tolerance), bisection previously failed with `"f(a) y f(b) deben tener
+  signos opuestos"`. Exact roots at the endpoints are now returned immediately with
+  `num_iter: 0`.
+- **ODE solvers (`ode_euler`, `ode_heun`, `ode_rk4`) — step desynchronization**:
+  when $(x_f - x_0) / h$ was non-integer, the output grid $(x_n)$ and the integration
+  step differed, causing desynchronization between table values and analytical errors.
+  Solvers now use the effective step $h_{\text{eff}} = (x_f - x_0) / n_{\text{steps}}$
+  (where $n_{\text{steps}} = \lceil (x_f - x_0) / h \rceil$) and expose `h_efectivo`
+  in the output payload.
+- **`dynamic_1d` & `core/utils.normalize_expr` — token-safe `sen` normalization**:
+  bare-string `.replace("sen", "sin")` corrupted parameter or variable names
+  containing `"sen"` (such as `"sense"` becoming `"sinse"`). Both locations now
+  use word boundaries (`\bsen\b`).
+- **`mc_hit_or_miss_1d` — confidence interval variance for signed functions**:
+  for signed integrals, the estimator is the signed indicator ($p_+ - p_-$). The
+  variance calculation previously used $p(1 - p)$ from unsigned hit-or-miss,
+  producing ~12% narrower intervals on zero-crossing functions. The variance now
+  correctly accounts for the signed indicator: $\mathrm{Var} = (p_+ + p_-) - (p_+ - p_-)^2$.
+- **`integral_comparar` — validation requiring $n$ multiple of 6**: running with $n$
+  incompatible with Simpson 1/3 (requires even $n$) or Simpson 3/8 (requires $n$
+  multiple of 3) resulted in partial execution with per-method error keys. It now
+  requires $n$ to be a multiple of 6 with an actionable hint (e.g. `Try n=6.`).
+
 ## [0.2.1] - 2026-10-20
 
 ### Fixed
